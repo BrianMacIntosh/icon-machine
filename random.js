@@ -19,6 +19,8 @@ window.RandomArt =
 		this.canvas = document.getElementById("generator");
 		this.context = this.canvas.getContext('2d');
 
+		this.dimensionSelect = document.getElementById("dimension");
+
 		//HACK:
 		//this.context.scale(3, 3);
 	},
@@ -76,6 +78,22 @@ window.RandomArt =
 			return "rgb(" + Math.floor(color.r) + "," + Math.floor(color.g) + "," + Math.floor(color.b) + ")";
 	},
 
+	notifySizeChanged: function()
+	{
+		this.initialize();
+		
+		this.setDimension(parseInt(this.dimensionSelect.options[this.dimensionSelect.selectedIndex].value));
+	},
+
+	setDimension: function(dimension)
+	{
+		this.initialize();
+
+		this.canvas.width = dimension;
+		this.canvas.height = dimension;
+		this.generateNewImage();
+	},
+
 	generateNewImage: function()
 	{
 		this.initialize();
@@ -87,8 +105,9 @@ window.RandomArt =
 	{
 		this.initialize();
 
-		var width = 32;
-		var height = 32;
+		var width = this.canvas.width;
+		var height = this.canvas.height;
+		var dscale = height / 32;
 		var centerXL = width/2-1;
 
 		// clear the canvas
@@ -96,21 +115,21 @@ window.RandomArt =
 		this.context.clearRect(0, 0, width, height);
 
 		// height of bottle lip
-		var lipHeight = this.randomRange(2, 5);
+		var lipHeight = Math.ceil(this.randomRange(2, 5) * dscale);
 		// height of stopper sticking out of bottle
-		var stopperTopHeight = this.randomRange(2, 5);
+		var stopperTopHeight = Math.ceil(this.randomRange(2, 5) * dscale);
 		// depth of stopper into the bottle
-		var stopperDepth = this.randomRange(lipHeight + 1, lipHeight + 4);
+		var stopperDepth = this.randomRange(lipHeight + 1, lipHeight + Math.round(4 * dscale));
 		// width of stopper inside bottle
-		var stopperWidth = this.randomRange(2, 6) * 2;
+		var stopperWidth = Math.ceil(this.randomRange(2, 6) * dscale) * 2;
 		// width of bottle neck
 		var neckWidth = stopperWidth + 2;
 		// width of bottle lip
-		var lipWidth = neckWidth + this.randomRange(2, 4) * 2;
+		var lipWidth = neckWidth + Math.ceil(this.randomRange(2, 4) * dscale) * 2;
 		// width of bottle body
-		var bodyWidth = this.randomRange(neckWidth / 2, 14) * 2;
+		var bodyWidth = this.randomRange(neckWidth / 2, Math.round(14 * dscale)) * 2;
 		// width of outer stopper
-		var stopperTopWidth = Math.min(stopperWidth+2, lipWidth - 2);
+		var stopperTopWidth = Math.min(stopperWidth + 2, lipWidth - 2);
 		// top of stopper
 		var stopperTop = 2;
 		// top of lip
@@ -120,7 +139,9 @@ window.RandomArt =
 		// bottom of bottle
 		var bottleBottom = height - 2;
 		// fluid start
-		var fluidTop = neckTop + this.randomRange(4, Math.floor((bottleBottom-neckTop)*0.6));
+		var fluidTop = neckTop + this.randomRange(height/8, (bottleBottom-neckTop)*0.6);
+		// min dist between contour changes
+		var contourInterval = Math.round(4 * dscale);
 
 		// generate shape of neck/body
 		var contour = [];
@@ -135,7 +156,7 @@ window.RandomArt =
 			velocity += acceleration;
 			contour[b] = Math.max(neckWidth/2, Math.min(width/2-2, contour[b-1]+d));
 
-			if (b%4==0 && Math.random()<=0.5)
+			if (b % contourInterval == 0 && Math.random()<=0.5)
 			{
 				//velocity = direction*this.randomRange(0,11)/2;
 				acceleration = direction*this.randomRange(0,5)/2;
