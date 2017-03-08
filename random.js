@@ -178,7 +178,7 @@ window.RandomArt =
 			g:this.randomRange(0, 256),
 			b:this.randomRange(0, 256),
 		};
-		var fluidColor2 = this.colorRandomize(fluidColor, 255);
+		var fluidColor2 = this.colorRandomize(fluidColor, 300);
 		
 		// draw outer stopper
 		var stopperLeft = centerXL - stopperTopWidth/2 + 1;
