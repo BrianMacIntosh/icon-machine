@@ -11,6 +11,9 @@
 
 window.RandomArt =
 {
+	dimension: 32,
+	tileDimension: 1,
+
 	initialize: function()
 	{
 		if (this.initialized) return;
@@ -19,10 +22,10 @@ window.RandomArt =
 		this.canvas = document.getElementById("generator");
 		this.context = this.canvas.getContext('2d');
 
-		this.dimensionSelect = document.getElementById("dimension");
+		this.canvasParent = document.getElementById("generatorCanvas");
 
-		//HACK:
-		//this.context.scale(3, 3);
+		this.dimensionSelect = document.getElementById("dimension");
+		this.tileDimensionSelect = document.getElementById("tileDimension");
 	},
 
 	/**
@@ -58,6 +61,9 @@ window.RandomArt =
 		return c;
 	},
 
+	/**
+	 * Returns a random color where each channel is within maxamt/2 of the specified color.
+	 */
 	colorRandomize: function(color, maxamt)
 	{
 		var maxamtHalf = Math.floor(maxamt/2);
@@ -65,6 +71,20 @@ window.RandomArt =
 			r: Math.max(0, Math.min(255, color.r + this.randomRange(-maxamtHalf, maxamtHalf))),
 			g: Math.max(0, Math.min(255, color.g + this.randomRange(-maxamtHalf, maxamtHalf))),
 			b: Math.max(0, Math.min(255, color.b + this.randomRange(-maxamtHalf, maxamtHalf))),
+		}
+		if (color.a !== undefined) c.a = color.a;
+		return c;
+	},
+
+	/**
+	 * Returns a random color where each channel at least range/2 away from the specified color.
+	 */
+	colorInvertRandomize: function(color, range)
+	{
+		var c = {
+			r: (color.r + Math.floor(range/2) + this.randomRange(0, 255-range)) % 256,
+			g: (color.g + Math.floor(range/2) + this.randomRange(0, 255-range)) % 256,
+			b: (color.b + Math.floor(range/2) + this.randomRange(0, 255-range)) % 256,
 		}
 		if (color.a !== undefined) c.a = color.a;
 		return c;
@@ -81,16 +101,33 @@ window.RandomArt =
 	notifySizeChanged: function()
 	{
 		this.initialize();
-		
 		this.setDimension(parseInt(this.dimensionSelect.options[this.dimensionSelect.selectedIndex].value));
+	},
+
+	notifyTileDimensionChanged: function()
+	{
+		this.initialize();
+		this.setTileDimension(parseInt(this.tileDimensionSelect.options[this.tileDimensionSelect.selectedIndex].value));
 	},
 
 	setDimension: function(dimension)
 	{
 		this.initialize();
+		this.dimension = dimension;
+		this.resizeCanvas();
+	},
 
-		this.canvas.width = dimension;
-		this.canvas.height = dimension;
+	setTileDimension: function(tileDimension)
+	{
+		this.initialize();
+		this.tileDimension = tileDimension;
+		this.resizeCanvas();
+	},
+
+	resizeCanvas: function()
+	{
+		this.canvasParent.style.width = this.canvas.width = this.dimension * this.tileDimension;
+		this.canvasParent.style.height = this.canvas.height = this.dimension * this.tileDimension;
 		this.generateNewImage();
 	},
 
@@ -98,15 +135,23 @@ window.RandomArt =
 	{
 		this.initialize();
 
-		this.drawRandomPotion();
+		for (var x = 0; x < this.tileDimension; x++)
+		{
+			for (var y = 0; y < this.tileDimension; y++)
+			{
+				this.context.translate(x * this.dimension, y * this.dimension);
+				this.drawRandomPotion();
+				this.context.translate(-x * this.dimension, -y * this.dimension);
+			}
+		}
 	},
 
 	drawRandomPotion: function()
 	{
 		this.initialize();
 
-		var width = this.canvas.width;
-		var height = this.canvas.height;
+		var width = this.dimension;
+		var height = this.dimension;
 		var dscale = height / 32;
 		var centerXL = width/2-1;
 
@@ -179,7 +224,7 @@ window.RandomArt =
 			b:this.randomRange(0, 256),
 		};
 		var fluidColor2 = this.colorRandomize(fluidColor, 300);
-		
+
 		// draw outer stopper
 		var stopperLeft = centerXL - stopperTopWidth/2 + 1;
 		var stopperRight = stopperLeft + stopperTopWidth;

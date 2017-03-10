@@ -45,8 +45,7 @@ body
 #generatorCanvas
 {
 	display: block;
-	height: 32px;
-	margin: 10px;
+	margin: 20px;
 }
 #generatorCanvas canvas
 {
@@ -55,7 +54,7 @@ body
 #generatorButton
 {
 	display: block;
-	margin: 10px;
+	margin: 20px;
 }
 #ad
 {
@@ -100,12 +99,19 @@ ga('send', 'pageview');
 <div id="title">Icon Machine</div>
 <div id="generatorCanvas"><canvas id="generator" width="32" height="32"></canvas></div>
 <div id="generatorButton">
-	<button onclick="RandomArt.generateNewImage()">Generate</button><br/>
-	Size: 
-	<select id="dimension" onchange="RandomArt.notifySizeChanged()">
+	Size: <select id="dimension" onchange="RandomArt.notifySizeChanged()">
 		<option value="16">16</option>
 		<option value="32" selected>32</option>
-	</select>
+	</select> px<br/>
+	Qty: <select id="tileDimension" onchange="RandomArt.notifyTileDimensionChanged()">
+		<option value="1" selected>1</option>
+		<option value="2">2x2</option>
+		<option value="4">4x4</option>
+		<option value="8">8x8</option>
+		<option value="16">16x16</option>
+		<option value="20">20x20</option>
+	</select><br/>
+	<button onclick="RandomArt.generateNewImage()">Generate</button>
 </div>
 <div id="text">
 	<p>It generates random pixel art potion icons.</p>
