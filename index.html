@@ -70,6 +70,11 @@ margin: 20px;
 }
 #generatorCanvas canvas
 {
+-ms-interpolation-mode: nearest-neighbor;
+image-rendering: -webkit-optimize-contrast;
+image-rendering: -webkit-crisp-edges;
+image-rendering: -moz-crisp-edges;
+image-rendering: -o-crisp-edges;
 image-rendering: pixelated;
 transform: scale(2);
 }
