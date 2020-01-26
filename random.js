@@ -709,7 +709,7 @@ window.RandomArt =
 		// length of the pommel
 		var pommelLength = Math.ceil(this.randomFloatLow() * 2 * dscale);
 		// length of the hilt
-		var hiltLength = Math.ceil(this.randomRange(4, 11) * dscale);
+		var hiltLength = Math.ceil(this.randomRange(6, 11) * dscale);
 		// width of the xguard
 		var xguardWidth = Math.ceil(this.randomRange(1, 4) * dscale);
 		// blade start (diagonal axis)
