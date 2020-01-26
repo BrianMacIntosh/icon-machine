@@ -920,7 +920,7 @@ window.RandomArt =
 		// the amount of symmetry for the xguard
 		var xguardSymmetry = this.randomFloat() < 0.3 ? 0 : 1;
 		// the thickness of the xguard
-		var xguardThickness = this.randomRange(1,3);
+		var xguardThickness = this.randomRangeFloat(1, 2.5);
 		// the bottom taper of the xguard
 		var xguardBottomTaper = this.randomFloat();
 		// the top taper of the xguard
@@ -930,7 +930,7 @@ window.RandomArt =
 		// max magnitude of xguard omega add
 		var xguardOmegaAmount = Math.PI/8;
 		// maximum absolute xguard omega
-		var xguardMaxOmega = xguardThickness==1 ? 0 : Math.PI/8;
+		var xguardMaxOmega = (xguardThickness-1)^2 * Math.PI/7;
 
 		// produce xguard shape
 		var currentPoint = new this.Vector(bladeStartOrthog, bounds.h - 1 - bladeStartOrthog);
