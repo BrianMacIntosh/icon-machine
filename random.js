@@ -11,17 +11,151 @@ the Free Software Foundation, either version 3 of the License, or
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 window.RandomArt =
 {
+	displayScale: 2,
 	dimension: 32,
 	tileDimension: 1,
+	iconClass: "potions",
+
+	allClasses: [ "potions", "blades" ],
+
+	Bounds: class
+	{
+		constructor(x, y, w, h)
+		{
+			if (y === undefined)
+			{
+				if (x === undefined)
+				{
+					this.x = 0; this.y = 0; this.w = 0; this.h = 0;
+				}
+				else
+				{
+					this.x = x.x; this.y = x.y; this.w = x.w; this.h = x.h;
+				}
+			}
+			else
+			{
+				this.x = x; this.y = y; this.w = w; this.h = h;
+			}
+		}
+
+		contains(v)
+		{
+			var x = v.x;
+			var y = v.y;
+			return x >= this.x && y >= this.y
+				&& x < this.x + this.w && y < this.y + this.h;
+		}
+	},
+
+	Vector: class
+	{
+		constructor(x, y)
+		{
+			if (y === undefined)
+			{
+				if (x === undefined)
+				{
+					this.x = 0; this.y = 0;
+				}
+				else
+				{
+					this.x = x.x; this.y = x.y;
+				}
+			}
+			else
+			{
+				this.x = x; this.y = y;
+			}
+		}
+
+		normalize()
+		{
+			var length = this.length();
+			this.x /= length;
+			this.y /= length;
+			return this;
+		}
+
+		length()
+		{
+			return Math.sqrt(this.x * this.x + this.y * this.y);
+		}
+
+		lengthSq()
+		{
+			return this.x * this.x + this.y * this.y;
+		}
+
+		distanceTo(x, y)
+		{
+			return Math.sqrt(this.distanceToSq(x, y));
+		}
+
+		distanceToSq(x, y)
+		{
+			if (y === undefined)
+			{
+				var dx = this.x - x.x; var dy = this.y - x.y;
+			}
+			else
+			{
+				var dx = this.x - x; var dy = this.y - y;
+			}
+			return dx * dx + dy * dy;
+		}
+
+		addVector(v)
+		{
+			this.x += v.x;
+			this.y += v.y;
+			return this;
+		}
+
+		lerpTo(v, t)
+		{
+			this.x = (v.x - this.x) * t + this.x;
+			this.y = (v.y - this.y) * t + this.y;
+			return this;
+		}
+
+		multiplyScalar(v)
+		{
+			this.x *= v;
+			this.y *= v;
+			return this;
+		}
+
+		dotProduct(x, y)
+		{
+			if (y === undefined)
+				return this.x * v.x + this.y * v.y;
+			else
+				return this.x * x + this.y * y;
+		}
+
+		set(x, y)
+		{
+			if (y === undefined)
+			{
+				this.x = x.x; this.y = x.y;
+			}
+			else
+			{
+				this.x = x; this.y = y;
+			}
+			return this;
+		}
+	},
 
 	initialize: function()
 	{
@@ -30,11 +164,45 @@ window.RandomArt =
 
 		this.canvas = document.getElementById("generator");
 		this.context = this.canvas.getContext('2d');
+		this.contextTranslation = new this.Vector(0, 0);
 
 		this.canvasParent = document.getElementById("generatorCanvas");
 
+		this.displayScaleSelect = document.getElementById("displayScale");
 		this.dimensionSelect = document.getElementById("dimension");
 		this.tileDimensionSelect = document.getElementById("tileDimension");
+		this.iconClassSelect = document.getElementById("iconClass");
+
+		// set default class from URL
+		var params = {};
+		var stringParams = location.search.substring(1).split('&');
+		for (var i = 0; i < stringParams.length; i++)
+		{
+			var nv = stringParams[i].split('=');
+			if (!nv[0]) continue;
+			params[nv[0]] = nv[1] || true;
+		}
+		if (params.class)
+		{
+			this.iconClass = params.class;
+
+			for (var i = 0; i < this.iconClassSelect.options.length; i++)
+			{
+				if (this.iconClassSelect.options[i].value == this.iconClass)
+				{
+					this.iconClassSelect.selectedIndex = i;
+				}
+			}
+		}
+
+		this.updateDisplayScale();
+	},
+
+	translateContext: function(x, y)
+	{
+		this.context.translate(x, y);
+		this.contextTranslation.x += x;
+		this.contextTranslation.y += y;
 	},
 
 	/**
@@ -42,7 +210,80 @@ window.RandomArt =
 	 */
 	randomRange: function(min, max)
 	{
-		return Math.floor(Math.random() * (max - min) + min);
+		return Math.floor(this.randomRangeFloat(min, max));
+	},
+
+	/**
+	 * Returns a random float in the range [min, max)
+	 */
+	randomRangeFloat: function(min, max)
+	{
+		return this.randomFloat() * (max - min) + min;
+	},
+
+	/**
+	 * Returns a random float between 0 and 1.
+	 */
+	randomFloat: function()
+	{
+		return Math.random();
+	},
+
+	/**
+	 * Returns a random float between 0 and 1, weighted to the extremes.
+	 */
+	randomFloatExtreme: function()
+	{
+		var rand = Math.random()*2 - 1;
+		return rand * rand;
+	},
+
+	/**
+	 * Returns a random float between 0 and 1, weighted down.
+	 */
+	randomFloatLow: function()
+	{
+		var v = Math.random();
+		return v * v;
+	},
+
+	/**
+	 * Returns a random RGB color.
+	 */
+	randomColor: function()
+	{
+		return {
+			r:this.randomRange(0, 256),
+			g:this.randomRange(0, 256),
+			b:this.randomRange(0, 256),
+		};
+	},
+
+	floatLerp: function(a, b, t)
+	{
+		return (b - a) * t + a;
+	},
+
+	clamp: function(val, min, max)
+	{
+		return Math.min(max, Math.max(val, min));
+	},
+
+	hsvToRgb: function(color)
+	{
+		var c = color.v * color.s;
+		var x = c * (1 - Math.abs((color.h / 60) % 2 - 1));
+		var m = color.v - c;
+		if (color.h < 60)		var outColor = { r: c, g: x, b: 0 };
+		else if (color.h < 120)	var outColor = { r: x, g: c, b: 0 };
+		else if (color.h < 180)	var outColor = { r: 0, g: c, b: x };
+		else if (color.h < 240)	var outColor = { r: 0, g: x, b: c };
+		else if (color.h < 300)	var outColor = { r: x, g: 0, b: c };
+		else 					var outColor = { r: c, g: 0, b: x };
+		outColor.r = Math.round((outColor.r + m) * 255);
+		outColor.g = Math.round((outColor.g + m) * 255);
+		outColor.b = Math.round((outColor.b + m) * 255);
+		return outColor;
 	},
 
 	colorLerp: function(a, b, t)
@@ -63,8 +304,20 @@ window.RandomArt =
 	{
 		var c = {
 			r: color.r * (1-t),
-			b: color.b * (1-t),
 			g: color.g * (1-t),
+			b: color.b * (1-t),
+		}
+		if (color.a !== undefined) c.a = color.a;
+		return c;
+	},
+
+	colorLighten: function(color, t)
+	{
+		t = 1-t;
+		var c = {
+			r: (1 - (1 - color.r/255) * t) * 255,
+			g: (1 - (1 - color.g/255) * t) * 255,
+			b: (1 - (1 - color.b/255) * t) * 255,
 		}
 		if (color.a !== undefined) c.a = color.a;
 		return c;
@@ -107,6 +360,12 @@ window.RandomArt =
 			return "rgb(" + Math.floor(color.r) + "," + Math.floor(color.g) + "," + Math.floor(color.b) + ")";
 	},
 
+	notifyDisplayScaleChanged: function()
+	{
+		this.initialize();
+		this.setDisplayScale(parseFloat(this.displayScaleSelect.options[this.displayScaleSelect.selectedIndex].value));
+	},
+
 	notifySizeChanged: function()
 	{
 		this.initialize();
@@ -117,6 +376,19 @@ window.RandomArt =
 	{
 		this.initialize();
 		this.setTileDimension(parseInt(this.tileDimensionSelect.options[this.tileDimensionSelect.selectedIndex].value));
+	},
+
+	notifyIconClassChanged: function()
+	{
+		this.initialize();
+		this.setIconClass(this.iconClassSelect.options[this.iconClassSelect.selectedIndex].value);
+	},
+
+	setDisplayScale: function(scale)
+	{
+		this.initialize();
+		this.displayScale = scale;
+		this.updateDisplayScale();
 	},
 
 	setDimension: function(dimension)
@@ -133,11 +405,74 @@ window.RandomArt =
 		this.resizeCanvas();
 	},
 
+	setIconClass: function(iconClass)
+	{
+		this.initialize();
+		this.iconClass = iconClass;
+		this.generateNewImage();
+		if (window.history) window.history.replaceState({}, "Icon Machine | " + this.iconClass, '/iconmachine?class=' + this.iconClass);
+	},
+
 	resizeCanvas: function()
 	{
 		this.canvasParent.style.width = this.canvas.width = this.dimension * this.tileDimension;
 		this.canvasParent.style.height = this.canvas.height = this.dimension * this.tileDimension;
+		this.updateDisplayScale();
 		this.generateNewImage();
+	},
+
+	updateDisplayScale: function()
+	{
+		this.canvasParent.style.padding = (0.5 * this.canvas.width * (this.displayScale - 1)) + "px";
+		this.canvas.style.transform = "scale(" + this.displayScale + ")";
+	},
+	
+	clearCanvas: function()
+	{
+		this.context.fillStyle = "rgba(0,0,0,0)";
+		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+	},
+	
+	/**
+	 * Adds a 1-pixel black border around the current drawing.
+	 */
+	addBorder: function(style)
+	{
+		style = style || "black";
+
+		var width = this.dimension;
+		var height = this.dimension;
+		
+		var readData = this.context.getImageData(this.contextTranslation.x, this.contextTranslation.y, width, height);
+		var mutableData = this.context.getImageData(this.contextTranslation.x, this.contextTranslation.y, width, height);
+		for (var x = 0; x < width; x++)
+		for (var y = 0; y < height; y++)
+		{
+			var pixelStart = (x + y * width) * 4;
+
+			// if this pixel is empty or edge
+			if (readData.data[pixelStart + 3] == 0
+				|| x == 0 || y == 0 || x == width - 1 || y == height - 1)
+			{
+				// and any orthogonal pixel isn't
+				var nxPixStart = ((x-1) + y * width) * 4;
+				var nyPixStart = (x + (y-1) * width) * 4;
+				var pxPixStart = ((x+1) + y * width) * 4;
+				var pyPixStart = (x + (y+1) * width) * 4;
+				if (x > 0 && readData.data[nxPixStart + 3] > 0
+					|| x < width - 1 && readData.data[pxPixStart + 3] > 0
+					|| y > 0 && readData.data[nyPixStart + 3] > 0
+					|| y < height - 1 && readData.data[pyPixStart + 3] > 0)
+				{
+					// add black border pixel
+					mutableData.data[pixelStart + 0] = 0;
+					mutableData.data[pixelStart + 1] = 0;
+					mutableData.data[pixelStart + 2] = 0;
+					mutableData.data[pixelStart + 3] = 255;
+				}
+			}
+		}
+		this.context.putImageData(mutableData, this.contextTranslation.x, this.contextTranslation.y);
 	},
 
 	generateNewImage: function()
@@ -148,9 +483,15 @@ window.RandomArt =
 		{
 			for (var y = 0; y < this.tileDimension; y++)
 			{
-				this.context.translate(x * this.dimension, y * this.dimension);
-				this.drawRandomPotion();
-				this.context.translate(-x * this.dimension, -y * this.dimension);
+				this.translateContext(x * this.dimension, y * this.dimension);
+				switch (this.iconClass == "any"
+					? this.allClasses[this.randomRange(0, this.allClasses.length)]
+					: this.iconClass)
+				{
+					case "potions": this.drawRandomPotion(); break;
+					case "blades": this.drawRandomBlade(); break;
+				}
+				this.translateContext(-x * this.dimension, -y * this.dimension);
 			}
 		}
 	},
@@ -164,9 +505,7 @@ window.RandomArt =
 		var dscale = height / 32;
 		var centerXL = width/2-1;
 
-		// clear the canvas
-		this.context.fillStyle = "rgba(0,0,0,0)";
-		this.context.clearRect(0, 0, width, height);
+		this.clearCanvas();
 
 		// height of bottle lip
 		var lipHeight = Math.ceil(this.randomRange(2, 5) * dscale);
@@ -180,8 +519,6 @@ window.RandomArt =
 		var neckWidth = stopperWidth + 2;
 		// width of bottle lip
 		var lipWidth = neckWidth + Math.ceil(this.randomRange(2, 4) * dscale) * 2;
-		// width of bottle body
-		var bodyWidth = this.randomRange(neckWidth / 2, Math.round(14 * dscale)) * 2;
 		// width of outer stopper
 		var stopperTopWidth = Math.min(stopperWidth + 2, lipWidth - 2);
 		// top of stopper
@@ -227,25 +564,11 @@ window.RandomArt =
 		var glassLight = { r:227, g:244, b:248, a: 165/255 };
 		var glassDark = { r:163, g:187, b:199, a: 165/255 };
 
-		var fluidColor = {
-			r:this.randomRange(0, 256),
-			g:this.randomRange(0, 256),
-			b:this.randomRange(0, 256),
-		};
+		var fluidColor = this.randomColor();
 		var fluidColor2 = this.colorRandomize(fluidColor, 300);
 
 		// draw outer stopper
 		var stopperLeft = centerXL - stopperTopWidth/2 + 1;
-		var stopperRight = stopperLeft + stopperTopWidth;
-		this.context.fillStyle = "black";
-		// top border
-		this.context.fillRect(stopperLeft, stopperTop-1, stopperTopWidth, 1);
-		// left border
-		this.context.fillRect(stopperLeft - 1, stopperTop, 1, stopperTopHeight)
-		// right border
-		this.context.fillRect(stopperRight, stopperTop, 1, stopperTopHeight)
-		// lip to border (draws behind stopper)
-		this.context.fillRect(centerXL - lipWidth/2 + 1, lipTop - 1, lipWidth, 1);
 		for (var x = 0; x < stopperTopWidth; x++)
 		{
 			var n = (x / (stopperTopWidth - 1))-0.5;
@@ -264,7 +587,7 @@ window.RandomArt =
 			{
 				var vn = (y - fluidTop) / (bottleBottom - fluidTop);
 				var left = centerXL - contourWidth/2;
-				for (var x = 0; x < contourWidth; x++)
+				for (var x = 1; x < contourWidth; x++)
 				{
 					var n = x/(contourWidth-1)-(0.5+Math.random()*0.1);
 					this.context.fillStyle = this.colorStr(
@@ -280,7 +603,7 @@ window.RandomArt =
 			if (y >= neckTop && y <= fluidTop)
 			{
 				var left = centerXL - contourWidth/2;
-				for (var x = 0; x < contourWidth; x++)
+				for (var x = 1; x < contourWidth; x++)
 				{
 					var n = x/(contourWidth-1);
 					this.context.fillStyle = this.colorStr(this.colorLerp(glassLight, glassDark, n));
@@ -291,9 +614,6 @@ window.RandomArt =
 			if (contourWidth == previousContour)
 			{
 				// contour is the same
-				this.context.fillStyle = "black";
-				this.context.fillRect(centerXL - contourWidth/2, y, 1, 1);
-				this.context.fillRect(centerXL + contourWidth/2 + 1, y, 1, 1);
 				this.context.fillStyle = this.colorStr(innerBorderLight);
 				this.context.fillRect(centerXL - contourWidth/2 + 1, y, 1, 1);
 				this.context.fillStyle = this.colorStr(innerBorderDark);
@@ -306,11 +626,6 @@ window.RandomArt =
 				var minContour = Math.min(contourWidth, previousContour);
 				var lineWidth = Math.abs(previousContour - contourWidth)/2;
 				var lineOffset = lineWidth-1;
-				this.context.fillStyle = "black";
-				this.context.fillRect(centerXL - minContour/2 - lineOffset, yOff, lineOffset, 1);
-				this.context.fillRect(centerXL + minContour/2 + 2, yOff, lineOffset, 1);
-				this.context.fillRect(centerXL - contourWidth/2, y, 1, 1);
-				this.context.fillRect(centerXL + contourWidth/2 + 1, y, 1, 1);
 				this.context.fillStyle = this.colorStr(innerBorderLight);
 				this.context.fillRect(centerXL - minContour/2 - lineWidth + 1, yInner, lineWidth, 1);
 				this.context.fillRect(centerXL - contourWidth/2 + 1, y, 1, 1);
@@ -357,9 +672,6 @@ window.RandomArt =
 
 		// draw lip (over stopper)
 		var lipLeft = centerXL - lipWidth/2 + 1;
-		this.context.fillStyle = "black";
-		this.context.fillRect(lipLeft - 1, lipTop, 1, lipHeight);
-		this.context.fillRect(lipLeft + lipWidth, lipTop, 1, lipHeight);
 		this.context.fillStyle = this.colorStr(innerBorderLight);
 		this.context.fillRect(lipLeft, lipTop, 1, lipHeight);
 		this.context.fillStyle = this.colorStr(innerBorderDark);
@@ -372,15 +684,363 @@ window.RandomArt =
 		}
 
 		// draw bottom border
-		this.context.fillStyle = "black";
-		var left = centerXL - contour[bottleBottom] + 1;
-		var width = contour[bottleBottom]*2;
-		this.context.fillRect(left, height-1, width, 1);
-		for (var x = 0; x < width; x++)
+		var borderLeft = centerXL - contour[bottleBottom] + 1;
+		var borderWidth = contour[bottleBottom]*2;
+		for (var x = 0; x < borderWidth; x++)
 		{
-			var n = (x/(width-1))-0.5;
+			var n = (x/(borderWidth-1))-0.5;
 			this.context.fillStyle = this.colorStr(this.colorLerp(innerBorderLight, innerBorderDark, n));
-			this.context.fillRect(left + x, bottleBottom, 1, 1);
+			this.context.fillRect(borderLeft + x, bottleBottom, 1, 1);
 		}
+
+		this.addBorder();
+	},
+	
+	drawRandomBlade: function()
+	{
+		this.initialize();
+
+		var bounds = new this.Bounds(0, 0, this.dimension, this.dimension);
+		var bounds1 = new this.Bounds(1, 1, bounds.w - 2, bounds.h - 2);
+		var dscale = bounds.h / 32;
+
+		this.clearCanvas();
+		
+		// length of the pommel
+		var pommelLength = Math.ceil(this.randomFloatLow() * 2 * dscale);
+		// length of the hilt
+		var hiltLength = Math.ceil(this.randomRange(4, 11) * dscale);
+		// width of the xguard
+		var xguardWidth = Math.ceil(this.randomRange(1, 4) * dscale);
+		// blade start (diagonal axis)
+		var bladeStartDiag = pommelLength + hiltLength + xguardWidth;
+		// determines the angle of the taper of the blade tip (as a ratio of the blade length)
+		var taperFactor = this.randomFloatLow();
+		// minimum blade width
+		var minimumBladeWidth = 1;
+		// size of each step in sampling the blade curve
+		var bladeSampleStepSize = Math.sqrt(2);
+		// width of the lighter edge pixels
+		var bladeEdgeWidth = 1;
+		// minimum width of the blade core before edge can be drawn
+		var bladeCoreEdgeExcludeWidth = 1;
+		// chance of the blade aquiring a random jog (per pixel)
+		var bladeJogChance = 0.04;
+		// chance to jog is reduced during the first this many pixels
+		var bladeJogChanceLeadIn = Math.ceil(12 * dscale);
+		// max magnitude of a blade jog
+		var bladeJogAmount = Math.PI / 4;
+		// chance of the blade acquiring a curve (per pixel)
+		var bladeOmegaChance = 0.02;
+		// max magnitude of blade omega add
+		var bladeOmegaAmount = Math.PI / 32;
+		// maximum absolute omega
+		var bladeMaxOmega = Math.PI / 32;
+		// radius of the blade at its base
+		var bladeStartRadius = Math.ceil(this.randomRange(2, 4) * dscale);
+
+		// amplitude of the cosine wave applied to blade width
+		var bladeWidthCosineAmp = Math.ceil(this.randomFloatLow() * 2 * dscale);
+		// wavelength of the cosine wave applied to blade width
+		var bladeWidthCosineWavelength = Math.ceil(this.randomRange(3, 12) * dscale);
+		// offset of the cosine wave applied to blade width
+		var bladeWidthCosineOffset = this.randomRangeFloat(0, Math.PI * 2);
+
+		// produce blade shape
+		var bladeCorePoints = [];
+		var bladeStartOrthog = Math.floor(bladeStartDiag / Math.sqrt(2));
+		var currentPoint = new this.Vector(bladeStartOrthog, bounds.h - 1 - bladeStartOrthog);
+		var currentDist = 0;
+		var currentWidthL = bladeStartRadius;
+		var currentWidthR = bladeStartRadius + this.randomRange(-1, 2);
+		var velocity = new this.Vector();
+		var velocityScaled = new this.Vector();
+		var angle = -Math.PI / 4;
+		var omega = 0; // velocity rotation in radians per pixel
+		do
+		{
+			var bladeWidthCosine = bladeWidthCosineAmp * Math.cos(bladeWidthCosineOffset + currentDist / bladeWidthCosineWavelength);
+			velocity.set(Math.cos(angle), Math.sin(angle));
+
+			var newPoint = new this.Vector(currentPoint);
+			newPoint.widthL = currentWidthL + bladeWidthCosine;
+			newPoint.widthR = currentWidthR + bladeWidthCosine;
+			newPoint.normal = new this.Vector(-velocity.y, velocity.x).normalize();
+			newPoint.forward = new this.Vector(velocity).normalize();
+			newPoint.dist = currentDist;
+			bladeCorePoints.push(newPoint);
+
+			if (this.randomFloat() <= bladeJogChance * Math.min(1, currentDist/bladeJogChanceLeadIn))
+			{
+				angle += this.randomRangeFloat(-bladeJogAmount, bladeJogAmount);
+			}
+			if (this.randomFloat() <= bladeOmegaChance)
+			{
+				omega += this.randomRangeFloat(-bladeOmegaAmount, bladeOmegaAmount);
+				omega = Math.sign(omega) * Math.min(bladeMaxOmega, Math.abs(omega));
+			}
+
+			velocityScaled.set(velocity).multiplyScalar(bladeSampleStepSize);
+			currentPoint.addVector(velocityScaled);
+			currentDist += bladeSampleStepSize;
+			angle += omega * bladeSampleStepSize;
+		} while(bounds1.contains(currentPoint));
+		// blade core postprocessing
+		for (var i = 0; i < bladeCorePoints.length; i++)
+		{
+			// calculate normalized distance
+			bladeCorePoints[i].normalizedDist = bladeCorePoints[i].dist / currentDist;
+
+			// apply taper
+			var taper = Math.min(1, (1 - bladeCorePoints[i].normalizedDist) / taperFactor);
+			bladeCorePoints[i].widthL *= taper;
+			bladeCorePoints[i].widthR *= taper;
+		}
+
+		// forward-axis color of the blade at the tip
+		var colorBladeLinearTipHsv = {
+			h: this.randomRangeFloat(0, 360),
+			s: this.randomFloat() < 0.3 ? this.randomFloatExtreme() * 0.6 : 0,
+			v: this.randomRangeFloat(0.75, 1)
+		};
+		var colorBladeLinearTip = this.hsvToRgb(colorBladeLinearTipHsv);
+		// forward-axis color of the blade at the hilt
+		var colorBladeLinearHilt = this.colorRandomize(this.colorDarken(colorBladeLinearTip, 0.7), 16);
+		// amount to lighten blade edge
+		var bladeEdgeLighten = 0.5;
+		// amount to darken blade far half
+		var bladeRightDarken = 0.5;
+
+		// draw blade
+		for (var x = 0; x < bounds.w; x++)
+		for (var y = 0; y < bounds.h; y++)
+		{
+			// never draw behind first core point
+			var dotProduct = bladeCorePoints[0].forward.dotProduct(x - bladeCorePoints[0].x, y - bladeCorePoints[0].y);
+			if (dotProduct < 0) continue;
+
+			// find the minimum distance to the blade core
+			//OPT: obviously inefficient
+			var coreDistanceSq = Infinity;
+			var bestPoint = null;
+			for (var i = 0; i < bladeCorePoints.length; i++)
+			{
+				var distanceSq = bladeCorePoints[i].distanceToSq(x, y);
+				if (distanceSq < coreDistanceSq)
+				{
+					coreDistanceSq = distanceSq;
+					bestPoint = bladeCorePoints[i];
+				}
+			}
+			var dotProduct = bestPoint.normal.dotProduct(x - bestPoint.x, y - bestPoint.y);
+			var useWidth = dotProduct < 0 ? bestPoint.widthL : bestPoint.widthR;
+			var coreDistance = Math.sqrt(coreDistanceSq);
+			if (coreDistance <= useWidth
+				|| coreDistance <= minimumBladeWidth)
+			{
+				var color = this.colorLerp(colorBladeLinearHilt, colorBladeLinearTip, bestPoint.normalizedDist);
+
+				// do not change core
+				if (bestPoint.x == x && bestPoint.y == y)
+				{ }
+				else
+				{
+					var edgeColor = this.colorLighten(color, bladeEdgeLighten);
+					var darkColor = this.colorDarken(color, bladeRightDarken);
+					var nonEdgeColor = dotProduct > 0 ? darkColor : color;
+					// lighten edge
+					if (useWidth > bladeCoreEdgeExcludeWidth)
+					{
+						var edgeWidthMin = useWidth - bladeEdgeWidth;
+						var edgeAmount = (coreDistance - edgeWidthMin) / bladeEdgeWidth;
+						edgeAmount = 1 - (1-edgeAmount)*(1-edgeAmount);
+						color = this.colorLerp(nonEdgeColor, edgeColor, edgeAmount);
+					}
+				}
+
+				this.context.fillStyle = this.colorStr(color);
+				this.context.fillRect(x, y, 1, 1);
+			}
+		}
+
+		// the radius of the hilt in pixel diagonals
+		var hiltRadius = Math.min(bladeStartRadius, 0.5 * Math.ceil(this.randomRange(0, 2) * dscale));
+		// wavelength of the hilt texture (in diagonal pixels)
+		var hiltWavelength = Math.max(2, Math.ceil(this.randomRange(3,6) * dscale));
+		// amplitude of the hilt wave
+		var hiltWaveAmplitude = Math.ceil(this.randomRange(1,3) * dscale);
+		// the color of the hilt
+		var hiltColorLight = this.hsvToRgb({ h: this.randomRange(0, 360), s: this.randomFloat(), v: this.randomRangeFloat(0.7, 1) });
+		// the color of the hilt inner shadows
+		var hiltColorDark = this.colorDarken(hiltColorLight, 1);
+
+		// start location of the hilt (diagonal axis, diagonal pixels)
+		var hiltStart = Math.floor(pommelLength * Math.sqrt(2));
+		var hiltLengthReal = Math.floor(bladeStartOrthog - hiltStart);
+		var hiltRadiusOdd = (hiltRadius % 2) != 0;
+		for (var l = 0; l < hiltLengthReal; l += 0.5)
+		{
+			var al = hiltStart + l;
+			var gripWave = Math.abs(Math.cos(Math.PI * 2 * l / hiltWavelength));
+			var color = this.colorLerp(hiltColorDark, hiltColorLight, gripWave);
+
+			// determine draw parameters
+			var core = new this.Vector(al, bounds.h - 1 - al);
+			var isOdd = (al % 1) != 0;
+			core.x = Math.ceil(core.x);
+			core.y = Math.ceil(core.y);
+			if (isOdd)
+			{
+				var left = -Math.ceil(hiltRadius);
+				var right = Math.floor(hiltRadius);
+				if (!hiltRadiusOdd) right--;
+			}
+			else
+			{
+				var left = -Math.floor(hiltRadius);
+				var right = Math.floor(hiltRadius);
+			}
+
+			// draw grip line
+			this.context.fillStyle = this.colorStr(color);
+			for (var h = left; h <= right; h++)
+			{
+				var darkenAmt = Math.max(0, h + hiltRadius) / (hiltRadius*4);
+				this.context.fillStyle = this.colorStr(this.colorDarken(color, darkenAmt));
+				this.context.fillRect(core.x + h, core.y + h, 1, 1);
+			}
+		}
+
+		// the length of half of the xguard
+		var xguardHalfLength = bladeStartRadius * (1 + 2*this.randomFloatLow()) + 1;
+		// the color of the xguard
+		var xguardColorLight = this.hsvToRgb({ h: this.randomRange(0, 360), s: this.randomFloatLow()*0.5, v: this.randomRangeFloat(0.7, 1) });
+		// the shadow color of the xguard
+		var xguardColorDark = this.colorDarken(xguardColorLight, 0.6);
+		// the amount of symmetry for the xguard
+		var xguardSymmetry = this.randomFloat() < 0.3 ? 0 : 1;
+		// the thickness of the xguard
+		var xguardThickness = this.randomRange(1,3);
+		// the bottom taper of the xguard
+		var xguardBottomTaper = this.randomFloat();
+		// the top taper of the xguard
+		var xguardTopTaper = this.floatLerp(this.randomFloat(), xguardBottomTaper, this.randomFloatExtreme());
+		// chance for the xguard to acquire a curve (per pixel)
+		var xguardOmegaChance = 0.3;
+		// max magnitude of xguard omega add
+		var xguardOmegaAmount = Math.PI/8;
+		// maximum absolute xguard omega
+		var xguardMaxOmega = xguardThickness==1 ? 0 : Math.PI/8;
+
+		// produce xguard shape
+		var currentPoint = new this.Vector(bladeStartOrthog, bounds.h - 1 - bladeStartOrthog);
+		currentPoint = [currentPoint, new this.Vector(currentPoint)];
+		var xguardControlPoints = [[],[]];
+		var xguardAngle = [-Math.PI * 3/4, Math.PI/4];
+		var xguardOmega = [0,0];
+		for (var xguardProgress = 0; xguardProgress <= xguardHalfLength; xguardProgress += bladeSampleStepSize)
+		{
+			for (var side = 0; side <= 1; side++)
+			{
+				var velocity = new this.Vector(Math.cos(xguardAngle[side]), Math.sin(xguardAngle[side]));
+
+				var newPoint = new this.Vector(currentPoint[side]);
+				if (side == 1)
+				{
+					var symmetricPoint = new this.Vector(bounds.h - 1 - currentPoint[0].y, bounds.w - 1 - currentPoint[0].x);
+					newPoint.lerpTo(symmetricPoint, xguardSymmetry);
+				}
+				newPoint.widthT = xguardThickness/2;
+				newPoint.widthB = xguardThickness/2;
+				newPoint.normal = new this.Vector(velocity.y, -velocity.x).multiplyScalar(side*2-1);
+				newPoint.dist = xguardProgress;
+				xguardControlPoints[side].push(newPoint);
+			}
+			for (var side = 0; side <= 1; side++)
+			{
+				var velocity = new this.Vector(Math.cos(xguardAngle[side]), Math.sin(xguardAngle[side]));
+
+				if (this.randomFloat() < xguardOmegaChance)
+				{
+					xguardOmega[side] += this.randomRangeFloat(-xguardOmegaAmount, xguardOmegaAmount);
+					xguardOmega[side] = Math.sign(xguardOmega[side]) * Math.min(xguardMaxOmega, Math.abs(xguardOmega[side]));
+				}
+
+				var xguardStep = new this.Vector(velocity).multiplyScalar(bladeSampleStepSize);
+				currentPoint[side].addVector(xguardStep);
+				xguardAngle[side] += xguardOmega[side];
+			}
+		}
+		// xguard core postprocessing
+		for (var side = 0; side <= 1; side++)
+		{
+			var controlPoints = xguardControlPoints[side];
+			for (var i = 0; i < controlPoints.length; i++)
+			{
+				// calculate normalized distance
+				controlPoints[i].normalizedDist = controlPoints[i].dist / xguardHalfLength;
+
+				// apply taper
+				controlPoints[i].widthT *= Math.min(1, (1 - controlPoints[i].normalizedDist) / xguardTopTaper);
+				controlPoints[i].widthB *= Math.min(1, (1 - controlPoints[i].normalizedDist) / xguardBottomTaper);
+			}
+		}
+
+		// draw xguard
+		for (var x = 0; x < bounds.w; x++)
+		for (var y = 0; y < bounds.h; y++)
+		{
+			// find the minimum distance to the xguard core
+			//OPT: obviously inefficient
+			var coreDistanceSq = Infinity;
+			var bestPoint = null;
+			for (var side = 0; side <= 1; side++)
+			{
+				var controlPoints = xguardControlPoints[side];
+				for (var i = 0; i < controlPoints.length; i++)
+				{
+					var distanceSq = controlPoints[i].distanceToSq(x, y);
+					if (distanceSq < coreDistanceSq)
+					{
+						coreDistanceSq = distanceSq;
+						bestPoint = controlPoints[i];
+					}
+				}
+			}
+
+			var dotProduct = bestPoint.normal.dotProduct(x - bestPoint.x, y - bestPoint.y);
+			var useWidth = dotProduct < 0 ? bestPoint.widthB : bestPoint.widthT;
+			var coreDistance = Math.sqrt(coreDistanceSq);
+			if (coreDistance <= useWidth)
+			{
+				var distFromTop = dotProduct < 0 ? bestPoint.widthT + coreDistance : bestPoint.widthT - coreDistance;
+				var darkAmt = distFromTop / (bestPoint.widthB + bestPoint.widthT);
+				this.context.fillStyle = this.colorStr(this.colorLerp(xguardColorLight, xguardColorDark, darkAmt));
+				this.context.fillRect(x, y, 1, 1);
+			}
+		}
+
+		// draw pommel
+		var pommelDiameterReal = pommelLength * Math.sqrt(2);
+		var pommelRadius = pommelDiameterReal/2;
+		var pommelCenter = new this.Vector(Math.floor(pommelRadius + 1), Math.ceil(bounds.h - pommelRadius - 2));
+		var shadowCenter = new this.Vector(0.5, 1).normalize().multiplyScalar(pommelRadius).addVector(pommelCenter);
+		var highlightCenter = new this.Vector(-1, -1).normalize().multiplyScalar(pommelRadius * 0.7).addVector(pommelCenter);
+		for (var x = 0; x <= pommelCenter.x + pommelRadius; x++)
+		for (var y = pommelCenter.y - pommelRadius; y <= pommelCenter.y + pommelRadius; y++)
+		{
+			var radius = pommelCenter.distanceTo(x, y);
+			if (radius <= pommelRadius)
+			{
+				var shadowDist = shadowCenter.distanceTo(x, y);
+				var highlightDist = highlightCenter.distanceTo(x, y);
+				var darkAmt = 1-Math.min(1, 0.8 * shadowDist / pommelRadius);
+				var lightAmt = 1-Math.min(1, highlightDist / pommelRadius);
+				this.context.fillStyle = this.colorStr(this.colorLighten(this.colorLerp(xguardColorLight, xguardColorDark, darkAmt), lightAmt));
+				this.context.fillRect(x, y, 1, 1);
+			}
+		}
+		
+		this.addBorder();
 	}
 }
