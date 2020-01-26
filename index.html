@@ -2,6 +2,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
 
 <head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
 <title>Icon Machine</title>
 
 <meta property="og:title" content="Icon Machine">
@@ -18,7 +20,6 @@
 <link rel="author" href="https://twitter.com/BrianAMacIntosh">
 
 <link rel="shortcut icon" href="favicon.ico" type="image/x-icon"/>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <script type="application/ld+json">
@@ -84,14 +85,6 @@ margin-top: 4em;
 }
 </style>
 
-<link rel="shortcut icon" href="favicon.ico" type="image/x-icon"/>
-
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<meta name="keywords" content="random, icon, pixel art, art, game art, procedural, generator">
-<meta name="description" content="Generate random pixel art icons online.">
-
 <!-- Load Google Analytics -->
 <script type="text/javascript">
 (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -115,7 +108,7 @@ ga('send', 'pageview');
 <main role="main">
 <br/>
 <div>
-Display Scale: <select id="displayScale" onchange="RandomArt.notifyDisplayScaleChanged()">
+<label for="iconClass">Display Scale:</label> <select id="displayScale" onchange="RandomArt.notifyDisplayScaleChanged()">
 	<option value="1">100%</option>
 	<option value="2" selected>200%</option>
 </select>
@@ -133,7 +126,7 @@ Display Scale: <select id="displayScale" onchange="RandomArt.notifyDisplayScaleC
 		<option value="4">4x4</option>
 		<option value="8">8x8</option>
 	</select><br/>
-	Mode: <select id="iconClass" onchange="RandomArt.notifyIconClassChanged()">
+	<label for="iconClass">Mode:</label> <select id="iconClass" onchange="RandomArt.notifyIconClassChanged()">
 		<option value="potions" selected>Potions</option>
 		<option value="blades">Blades</option>
 		<!--option value="any">Any</option-->
