@@ -771,7 +771,7 @@ window.RandomArt =
 		var bladeWidthCosineOffset = this.randomRangeFloat(0, Math.PI * 2);
 		
 		// amplitude of the blade core wiggle curve
-		var bladeWiggleAmp = Math.ceil(Math.max(0, this.randomFloat()*8-7) * Math.PI/10 * dscale);
+		var bladeWiggleAmp = Math.ceil(Math.max(0, this.randomFloat()*8-7) * Math.PI/16 * dscale);
 		// wavelength of the blade core wiggle curve
 		var bladeWiggleWavelength = Math.ceil(this.randomRangeFloat(6, 18) * dscale);
 
