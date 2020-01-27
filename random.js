@@ -433,6 +433,11 @@ window.RandomArt =
 		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 	},
 	
+	drawPixel: function(x, y)
+	{
+		this.context.fillRect(x, y, 1, 1);
+	},
+	
 	/**
 	 * Adds a 1-pixel black border around the current drawing.
 	 */
@@ -595,7 +600,7 @@ window.RandomArt =
 							this.colorLerp(fluidColor, fluidColor2, vn),
 							this.colorLerp(this.colorDarken(fluidColor, 1), this.colorDarken(fluidColor2, 1), vn),
 							n));
-					this.context.fillRect(left + x, y, 1, 1);
+					this.drawPixel(left + x, y);
 				}
 			}
 
@@ -607,7 +612,7 @@ window.RandomArt =
 				{
 					var n = x/(contourWidth-1);
 					this.context.fillStyle = this.colorStr(this.colorLerp(glassLight, glassDark, n));
-					this.context.fillRect(left + x, y, 1, 1);
+					this.drawPixel(left + x, y);
 				}
 			}
 
@@ -615,9 +620,9 @@ window.RandomArt =
 			{
 				// contour is the same
 				this.context.fillStyle = this.colorStr(innerBorderLight);
-				this.context.fillRect(centerXL - contourWidth/2 + 1, y, 1, 1);
+				this.drawPixel(centerXL - contourWidth/2 + 1, y);
 				this.context.fillStyle = this.colorStr(innerBorderDark);
-				this.context.fillRect(centerXL + contourWidth/2, y, 1, 1);
+				this.drawPixel(centerXL + contourWidth/2, y);
 			}
 			else
 			{
@@ -628,10 +633,10 @@ window.RandomArt =
 				var lineOffset = lineWidth-1;
 				this.context.fillStyle = this.colorStr(innerBorderLight);
 				this.context.fillRect(centerXL - minContour/2 - lineWidth + 1, yInner, lineWidth, 1);
-				this.context.fillRect(centerXL - contourWidth/2 + 1, y, 1, 1);
+				this.drawPixel(centerXL - contourWidth/2 + 1, y);
 				this.context.fillStyle = this.colorStr(innerBorderDark);
 				this.context.fillRect(centerXL + minContour/2 + 1, yInner, lineWidth, 1);
-				this.context.fillRect(centerXL + contourWidth/2, y, 1, 1);
+				this.drawPixel(centerXL + contourWidth/2, y);
 			}
 			
 			previousContour = contourWidth;
@@ -690,7 +695,7 @@ window.RandomArt =
 		{
 			var n = (x/(borderWidth-1))-0.5;
 			this.context.fillStyle = this.colorStr(this.colorLerp(innerBorderLight, innerBorderDark, n));
-			this.context.fillRect(borderLeft + x, bottleBottom, 1, 1);
+			this.drawPixel(borderLeft + x, bottleBottom);
 		}
 
 		this.addBorder();
@@ -859,7 +864,7 @@ window.RandomArt =
 				}
 
 				this.context.fillStyle = this.colorStr(color);
-				this.context.fillRect(x, y, 1, 1);
+				this.drawPixel(x, y);
 			}
 		}
 
@@ -907,7 +912,7 @@ window.RandomArt =
 			{
 				var darkenAmt = Math.max(0, h + hiltRadius) / (hiltRadius*4);
 				this.context.fillStyle = this.colorStr(this.colorDarken(color, darkenAmt));
-				this.context.fillRect(core.x + h, core.y + h, 1, 1);
+				this.drawPixel(core.x + h, core.y + h);
 			}
 		}
 
@@ -1016,7 +1021,7 @@ window.RandomArt =
 				var distFromTop = dotProduct < 0 ? bestPoint.widthT + coreDistance : bestPoint.widthT - coreDistance;
 				var darkAmt = distFromTop / (bestPoint.widthB + bestPoint.widthT);
 				this.context.fillStyle = this.colorStr(this.colorLerp(xguardColorLight, xguardColorDark, darkAmt));
-				this.context.fillRect(x, y, 1, 1);
+				this.drawPixel(x, y);
 			}
 		}
 
@@ -1037,7 +1042,7 @@ window.RandomArt =
 				var darkAmt = 1-Math.min(1, 0.8 * shadowDist / pommelRadius);
 				var lightAmt = 1-Math.min(1, highlightDist / pommelRadius);
 				this.context.fillStyle = this.colorStr(this.colorLighten(this.colorLerp(xguardColorLight, xguardColorDark, darkAmt), lightAmt));
-				this.context.fillRect(x, y, 1, 1);
+				this.drawPixel(x, y);
 			}
 		}
 		
