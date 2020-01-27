@@ -719,6 +719,9 @@ window.RandomArt =
 	
 	drawRandomBlade: function()
 	{
+		//TODO: seeding
+		//TODO: make sure everything is dimensionally scaled
+		
 		this.initialize();
 
 		var bounds = new this.Bounds(0, 0, this.dimension, this.dimension);
@@ -763,9 +766,14 @@ window.RandomArt =
 		// amplitude of the cosine wave applied to blade width
 		var bladeWidthCosineAmp = Math.ceil(Math.max(0, this.randomFloatLow()*1.2-0.2) * 2 * dscale);
 		// wavelength of the cosine wave applied to blade width
-		var bladeWidthCosineWavelength = Math.ceil(this.randomRange(3, 12) * dscale);
+		var bladeWidthCosineWavelength = Math.ceil(this.randomRange(3 * Math.max(1, bladeWidthCosineAmp), 12) * dscale);
 		// offset of the cosine wave applied to blade width
 		var bladeWidthCosineOffset = this.randomRangeFloat(0, Math.PI * 2);
+		
+		// amplitude of the blade core wiggle curve
+		var bladeWiggleAmp = Math.ceil(Math.max(0, this.randomFloat()*8-7) * Math.PI/10 * dscale);
+		// wavelength of the blade core wiggle curve
+		var bladeWiggleWavelength = Math.ceil(this.randomRangeFloat(6, 18) * dscale);
 
 		// produce blade shape
 		var bladeCorePoints = [];
@@ -781,16 +789,17 @@ window.RandomArt =
 		do
 		{
 			var bladeWidthCosine = bladeWidthCosineAmp * Math.cos(bladeWidthCosineOffset + currentDist / bladeWidthCosineWavelength);
-			velocity.set(Math.cos(angle), Math.sin(angle));
+			var useAngle = angle + bladeWiggleAmp * Math.sin(Math.PI * 2 * currentDist/bladeWiggleWavelength);
+			velocity.set(Math.cos(useAngle), Math.sin(useAngle));
 
 			var newPoint = new this.Vector(currentPoint);
-			newPoint.widthL = currentWidthL + bladeWidthCosine;
-			newPoint.widthR = currentWidthR + bladeWidthCosine;
+			newPoint.widthL = Math.max(1, currentWidthL + bladeWidthCosine);
+			newPoint.widthR = Math.max(1, currentWidthR + bladeWidthCosine);
 			newPoint.normal = new this.Vector(-velocity.y, velocity.x).normalize();
 			newPoint.forward = new this.Vector(velocity).normalize();
 			newPoint.dist = currentDist;
 			bladeCorePoints.push(newPoint);
-
+			
 			if (this.randomFloat() <= bladeJogChance * Math.min(1, currentDist/bladeJogChanceLeadIn))
 			{
 				angle += this.randomRangeFloat(-bladeJogAmount, bladeJogAmount);
@@ -813,7 +822,10 @@ window.RandomArt =
 			bladeCorePoints[i].normalizedDist = bladeCorePoints[i].dist / currentDist;
 
 			// apply taper
-			var taper = Math.min(1, (1 - bladeCorePoints[i].normalizedDist) / taperFactor);
+			var invTaperFactor = 1 - taperFactor;
+			var taper = bladeCorePoints[i].normalizedDist <= invTaperFactor
+				? 1
+				: (1-bladeCorePoints[i].normalizedDist) / taperFactor;
 			bladeCorePoints[i].widthL *= taper;
 			bladeCorePoints[i].widthR *= taper;
 		}
@@ -842,20 +854,26 @@ window.RandomArt =
 
 			// find the minimum distance to the blade core
 			//OPT: obviously inefficient
-			var coreDistanceSq = Infinity;
+			var coreDistanceNorm = Infinity;
 			var bestPoint = null;
 			for (var i = 0; i < bladeCorePoints.length; i++)
 			{
-				var distanceSq = bladeCorePoints[i].distanceToSq(x, y);
-				if (distanceSq < coreDistanceSq)
+				// normalizes distance based on width
+				var corePoint = bladeCorePoints[i];
+				var dotProduct = corePoint.normal.dotProduct(x - corePoint.x, y - corePoint.y);
+				var useWidth = dotProduct < 0 ? corePoint.widthL : corePoint.widthR;
+				var distanceNorm = corePoint.distanceTo(x, y) / useWidth;
+				if (distanceNorm < coreDistanceNorm)
 				{
-					coreDistanceSq = distanceSq;
+					coreDistanceNorm = distanceNorm;
 					bestPoint = bladeCorePoints[i];
 				}
 			}
+			if (bestPoint == null) continue;
+			
 			var dotProduct = bestPoint.normal.dotProduct(x - bestPoint.x, y - bestPoint.y);
 			var useWidth = dotProduct < 0 ? bestPoint.widthL : bestPoint.widthR;
-			var coreDistance = Math.sqrt(coreDistanceSq);
+			var coreDistance = bestPoint.distanceTo(x, y);
 			if (coreDistance <= useWidth
 				|| coreDistance <= minimumBladeWidth)
 			{
