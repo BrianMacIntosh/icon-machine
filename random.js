@@ -220,6 +220,14 @@ window.RandomArt =
 	{
 		return this.randomFloat() * (max - min) + min;
 	},
+	
+	/**
+	 * Returns a random float in the range [min, max), skewed high.
+	 */
+	randomRangeFloatHigh: function(min, max)
+	{
+		return this.randomFloatHigh() * (max - min) + min;
+	},
 
 	/**
 	 * Returns a random float between 0 and 1.
@@ -245,6 +253,14 @@ window.RandomArt =
 	{
 		var v = Math.random();
 		return v * v;
+	},
+	
+	/**
+	 * Returns a random float between 0 and 1, weighted up.
+	 */
+	randomFloatHigh: function()
+	{
+		return 1-this.randomFloatLow();
 	},
 
 	/**
@@ -745,7 +761,7 @@ window.RandomArt =
 		var bladeStartRadius = Math.ceil(this.randomRange(2, 4) * dscale);
 
 		// amplitude of the cosine wave applied to blade width
-		var bladeWidthCosineAmp = Math.ceil(this.randomFloatLow() * 2 * dscale);
+		var bladeWidthCosineAmp = Math.ceil(Math.max(0, this.randomFloatLow()*1.2-0.2) * 2 * dscale);
 		// wavelength of the cosine wave applied to blade width
 		var bladeWidthCosineWavelength = Math.ceil(this.randomRange(3, 12) * dscale);
 		// offset of the cosine wave applied to blade width
@@ -925,7 +941,7 @@ window.RandomArt =
 		// the amount of symmetry for the xguard
 		var xguardSymmetry = this.randomFloat() < 0.3 ? 0 : 1;
 		// the thickness of the xguard
-		var xguardThickness = this.randomRangeFloat(1, 2.5);
+		var xguardThickness = this.randomRangeFloatHigh(1, 2.5);
 		// the bottom taper of the xguard
 		var xguardBottomTaper = this.randomFloat();
 		// the top taper of the xguard
