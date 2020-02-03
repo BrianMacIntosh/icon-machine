@@ -736,8 +736,58 @@ window.RandomArt =
 		var hiltLength = Math.ceil(this.randomRange(6, 11) * dscale);
 		// width of the xguard
 		var xguardWidth = Math.ceil(this.randomRange(1, 4) * dscale);
-		// blade start (diagonal axis)
-		var bladeStartDiag = pommelLength + hiltLength + xguardWidth;
+		
+		// draw the blade
+		var bladeParams = {
+			startDiag: pommelLength + hiltLength + xguardWidth
+		};
+		var bladeResults = this.drawBladeHelper(bladeParams);
+		
+		// draw the hilt
+		var hiltStartDiag = Math.floor(pommelLength * Math.sqrt(2));
+		var hiltParams = {
+			startDiag: hiltStartDiag,
+			lengthDiag: Math.floor(bladeResults.startOrtho - hiltStartDiag),
+			maxRadius: bladeResults.startRadius
+		};
+		this.drawGripHelper(hiltParams);
+
+		// draw the crossguard
+		var crossguardParams = {
+			positionDiag: bladeResults.startOrtho,
+			halfLength: bladeResults.startRadius * (1 + 2*this.randomFloatLow()) + 1
+		};
+		var crossguardResults = this.drawCrossguardHelper(crossguardParams);
+
+		// draw the pommel
+		var pommelRadius = pommelLength * Math.sqrt(2) / 2;
+		var pommelParams = {
+			center: new this.Vector(Math.floor(pommelRadius + 1), Math.ceil(bounds.h - pommelRadius - 2)),
+			radius: pommelRadius,
+			colorLight: crossguardResults.colorLight,
+			colorDark: crossguardResults.colorDark
+		};
+		this.drawRoundOrnamentHelper(pommelParams);
+		
+		this.addBorder();
+	},
+	
+	// Helper function that draws a blade with parameters
+	// The blade is oriented from the bottom-left corner of the tile to the top-right
+	// Parameters:
+	// - (required) startDiag: The distance from the bottom-left corner to the base of the blade
+	//TODO: expose more properties
+	// Returns an object containing:
+	// - startDiag: The distance from the bottom-left corner to the base of the blade
+	// - startOrtho: The distance from the left and bottom edges to the base of the blade
+	// - startRadius: The radius of the blade at its base
+	//TODO: return more info
+	drawBladeHelper: function(params)
+	{
+		var bounds = new this.Bounds(0, 0, this.dimension, this.dimension);
+		var bounds1 = new this.Bounds(1, 1, bounds.w - 2, bounds.h - 2);
+		var dscale = bounds.h / 32;
+		
 		// determines the angle of the taper of the blade tip (as a ratio of the blade length)
 		var taperFactor = this.randomFloatLow();
 		// minimum blade width
@@ -777,8 +827,8 @@ window.RandomArt =
 
 		// produce blade shape
 		var bladeCorePoints = [];
-		var bladeStartOrthog = Math.floor(bladeStartDiag / Math.sqrt(2));
-		var currentPoint = new this.Vector(bladeStartOrthog, bounds.h - 1 - bladeStartOrthog);
+		var bladeStartOrtho = Math.floor(params.startDiag / Math.sqrt(2));
+		var currentPoint = new this.Vector(bladeStartOrtho, bounds.h - 1 - bladeStartOrtho);
 		var currentDist = 0;
 		var currentWidthL = bladeStartRadius;
 		var currentWidthR = bladeStartRadius + this.randomRange(-1, 2);
@@ -901,57 +951,28 @@ window.RandomArt =
 				this.drawPixel(x, y);
 			}
 		}
-
-		// the radius of the hilt in pixel diagonals
-		var hiltRadius = Math.min(bladeStartRadius, 0.5 * Math.ceil(this.randomRange(0, 2) * dscale));
-		// wavelength of the hilt texture (in diagonal pixels)
-		var hiltWavelength = Math.max(2, Math.ceil(this.randomRange(3,6) * dscale));
-		// amplitude of the hilt wave
-		var hiltWaveAmplitude = Math.ceil(this.randomRange(1,3) * dscale);
-		// the color of the hilt
-		var hiltColorLight = this.hsvToRgb({ h: this.randomRange(0, 360), s: this.randomFloat(), v: this.randomRangeFloat(0.7, 1) });
-		// the color of the hilt inner shadows
-		var hiltColorDark = this.colorDarken(hiltColorLight, 1);
-
-		// start location of the hilt (diagonal axis, diagonal pixels)
-		var hiltStart = Math.floor(pommelLength * Math.sqrt(2));
-		var hiltLengthReal = Math.floor(bladeStartOrthog - hiltStart);
-		var hiltRadiusOdd = (hiltRadius % 2) != 0;
-		for (var l = 0; l < hiltLengthReal; l += 0.5)
-		{
-			var al = hiltStart + l;
-			var gripWave = Math.abs(Math.cos(Math.PI * 2 * l / hiltWavelength));
-			var color = this.colorLerp(hiltColorDark, hiltColorLight, gripWave);
-
-			// determine draw parameters
-			var core = new this.Vector(al, bounds.h - 1 - al);
-			var isOdd = (al % 1) != 0;
-			core.x = Math.ceil(core.x);
-			core.y = Math.ceil(core.y);
-			if (isOdd)
-			{
-				var left = -Math.ceil(hiltRadius);
-				var right = Math.floor(hiltRadius);
-				if (!hiltRadiusOdd) right--;
-			}
-			else
-			{
-				var left = -Math.floor(hiltRadius);
-				var right = Math.floor(hiltRadius);
-			}
-
-			// draw grip line
-			this.context.fillStyle = this.colorStr(color);
-			for (var h = left; h <= right; h++)
-			{
-				var darkenAmt = Math.max(0, h + hiltRadius) / (hiltRadius*4);
-				this.context.fillStyle = this.colorStr(this.colorDarken(color, darkenAmt));
-				this.drawPixel(core.x + h, core.y + h);
-			}
-		}
-
-		// the length of half of the xguard
-		var xguardHalfLength = bladeStartRadius * (1 + 2*this.randomFloatLow()) + 1;
+		
+		return {
+			startDiag: params.startDiag,
+			startOrtho: bladeStartOrtho,
+			startRadius: bladeStartRadius
+		};
+	},
+	
+	// Helper function that draws a crossguard with parameters
+	// The crossguard is oriented perpendicular to the diagonal from the bottom-left corner of the tile to the top-right
+	// Parameters:
+	// - (required) positionDiag: The distance from the bottom-left corner to the origin of the crossguard
+	// - (required) halfLength: Half the length of the crossguard
+	//TODO: expose more properties
+	// Returns an object containing:
+	// - colorLight: The light color of the crossguard
+	// - colorDark: The dark color of the crossguard
+	drawCrossguardHelper: function(params)
+	{
+		var bounds = new this.Bounds(0, 0, this.dimension, this.dimension);
+		var dscale = bounds.h / 32;
+		
 		// the color of the xguard
 		var xguardColorLight = this.hsvToRgb({ h: this.randomRange(0, 360), s: this.randomFloatLow()*0.5, v: this.randomRangeFloat(0.7, 1) });
 		// the shadow color of the xguard
@@ -970,14 +991,16 @@ window.RandomArt =
 		var xguardOmegaAmount = Math.PI/8;
 		// maximum absolute xguard omega
 		var xguardMaxOmega = (xguardThickness-1)^2 * Math.PI/7;
+		// size of each step in sampling the xguard curve
+		var xguardSampleStepSize = Math.sqrt(2);
 
 		// produce xguard shape
-		var currentPoint = new this.Vector(bladeStartOrthog, bounds.h - 1 - bladeStartOrthog);
+		var currentPoint = new this.Vector(params.positionDiag, bounds.h - 1 - params.positionDiag);
 		currentPoint = [currentPoint, new this.Vector(currentPoint)];
 		var xguardControlPoints = [[],[]];
 		var xguardAngle = [-Math.PI * 3/4, Math.PI/4];
 		var xguardOmega = [0,0];
-		for (var xguardProgress = 0; xguardProgress <= xguardHalfLength; xguardProgress += bladeSampleStepSize)
+		for (var xguardProgress = 0; xguardProgress <= params.halfLength; xguardProgress += xguardSampleStepSize)
 		{
 			for (var side = 0; side <= 1; side++)
 			{
@@ -1005,7 +1028,7 @@ window.RandomArt =
 					xguardOmega[side] = Math.sign(xguardOmega[side]) * Math.min(xguardMaxOmega, Math.abs(xguardOmega[side]));
 				}
 
-				var xguardStep = new this.Vector(velocity).multiplyScalar(bladeSampleStepSize);
+				var xguardStep = new this.Vector(velocity).multiplyScalar(xguardSampleStepSize);
 				currentPoint[side].addVector(xguardStep);
 				xguardAngle[side] += xguardOmega[side];
 			}
@@ -1017,7 +1040,7 @@ window.RandomArt =
 			for (var i = 0; i < controlPoints.length; i++)
 			{
 				// calculate normalized distance
-				controlPoints[i].normalizedDist = controlPoints[i].dist / xguardHalfLength;
+				controlPoints[i].normalizedDist = controlPoints[i].dist / params.halfLength;
 
 				// apply taper
 				controlPoints[i].widthT *= Math.min(1, (1 - controlPoints[i].normalizedDist) / xguardTopTaper);
@@ -1058,28 +1081,101 @@ window.RandomArt =
 				this.drawPixel(x, y);
 			}
 		}
+		
+		return {
+			colorLight: xguardColorLight,
+			colorDark: xguardColorDark
+		};
+	},
+	
+	// Helper function that draws a grip with parameters
+	// The grip is oriented from the bottom-left corner of the canvas to the top-right
+	// Parameters:
+	// - startDiag (required): The distance from the bottom-left corner to the start of the grip
+	// - lengthDiag (required): The length of the grip
+	// - maxRadius (optional): The maximum radius of the grip
+	//TODO: expose more parameters
+	drawGripHelper: function(params)
+	{
+		var bounds = new this.Bounds(0, 0, this.dimension, this.dimension);
+		var dscale = bounds.h / 32;
+		
+		// the radius of the hilt in pixel diagonals
+		var hiltRadius = 0.5 * Math.ceil(this.randomRange(0, 2) * dscale);
+		if (params.maxRadius !== undefined) hiltRadius = Math.min(params.maxRadius, hiltRadius);
+		// wavelength of the hilt texture (in diagonal pixels)
+		var hiltWavelength = Math.max(2, Math.ceil(this.randomRange(3,6) * dscale));
+		// amplitude of the hilt wave
+		var hiltWaveAmplitude = Math.ceil(this.randomRange(1,3) * dscale);
+		// the color of the hilt
+		var hiltColorLight = this.hsvToRgb({ h: this.randomRange(0, 360), s: this.randomFloat(), v: this.randomRangeFloat(0.7, 1) });
+		// the color of the hilt inner shadows
+		var hiltColorDark = this.colorDarken(hiltColorLight, 1);
 
-		// draw pommel
-		var pommelDiameterReal = pommelLength * Math.sqrt(2);
-		var pommelRadius = pommelDiameterReal/2;
-		var pommelCenter = new this.Vector(Math.floor(pommelRadius + 1), Math.ceil(bounds.h - pommelRadius - 2));
-		var shadowCenter = new this.Vector(0.5, 1).normalize().multiplyScalar(pommelRadius).addVector(pommelCenter);
-		var highlightCenter = new this.Vector(-1, -1).normalize().multiplyScalar(pommelRadius * 0.7).addVector(pommelCenter);
-		for (var x = 0; x <= pommelCenter.x + pommelRadius; x++)
-		for (var y = pommelCenter.y - pommelRadius; y <= pommelCenter.y + pommelRadius; y++)
+		// start location of the hilt (diagonal axis, diagonal pixels)
+		var hiltRadiusOdd = (hiltRadius % 2) != 0;
+		for (var l = 0; l < params.lengthDiag; l += 0.5)
 		{
-			var radius = pommelCenter.distanceTo(x, y);
+			var al = params.startDiag + l;
+			var gripWave = Math.abs(Math.cos(Math.PI * 2 * l / hiltWavelength));
+			var color = this.colorLerp(hiltColorDark, hiltColorLight, gripWave);
+
+			// determine draw parameters
+			var core = new this.Vector(al, bounds.h - 1 - al);
+			var isOdd = (al % 1) != 0;
+			core.x = Math.ceil(core.x);
+			core.y = Math.ceil(core.y);
+			if (isOdd)
+			{
+				var left = -Math.ceil(hiltRadius);
+				var right = Math.floor(hiltRadius);
+				if (!hiltRadiusOdd) right--;
+			}
+			else
+			{
+				var left = -Math.floor(hiltRadius);
+				var right = Math.floor(hiltRadius);
+			}
+
+			// draw grip line
+			this.context.fillStyle = this.colorStr(color);
+			for (var h = left; h <= right; h++)
+			{
+				var darkenAmt = Math.max(0, h + hiltRadius) / (hiltRadius*4);
+				this.context.fillStyle = this.colorStr(this.colorDarken(color, darkenAmt));
+				this.drawPixel(core.x + h, core.y + h);
+			}
+		}
+	},
+	
+	// Helper function that draws a round ornament with parameters
+	// Parameters:
+	// - center (required): [vector] the center of the ornament
+	// - colorLight (defaults): The light color of the ornament
+	// - colorDark (defaults): The dark color of the ornament
+	//TODO: expose more parameters
+	drawRoundOrnamentHelper: function(params)
+	{
+		var pommelColorLight = params.colorLight
+			|| this.hsvToRgb({ h: this.randomRange(0, 360), s: this.randomFloatLow()*0.5, v: this.randomRangeFloat(0.7, 1) });
+		var pommelColorDark = params.colorDark
+			|| this.colorDarken(pommelColorLight, 0.6);
+		var pommelRadius = params.radius;
+		var shadowCenter = new this.Vector(0.5, 1).normalize().multiplyScalar(pommelRadius).addVector(params.center);
+		var highlightCenter = new this.Vector(-1, -1).normalize().multiplyScalar(pommelRadius * 0.7).addVector(params.center);
+		for (var x = 0; x <= params.center.x + pommelRadius; x++)
+		for (var y = params.center.y - pommelRadius; y <= params.center.y + pommelRadius; y++)
+		{
+			var radius = params.center.distanceTo(x, y);
 			if (radius <= pommelRadius)
 			{
 				var shadowDist = shadowCenter.distanceTo(x, y);
 				var highlightDist = highlightCenter.distanceTo(x, y);
 				var darkAmt = 1-Math.min(1, 0.8 * shadowDist / pommelRadius);
 				var lightAmt = 1-Math.min(1, highlightDist / pommelRadius);
-				this.context.fillStyle = this.colorStr(this.colorLighten(this.colorLerp(xguardColorLight, xguardColorDark, darkAmt), lightAmt));
+				this.context.fillStyle = this.colorStr(this.colorLighten(this.colorLerp(pommelColorLight, pommelColorDark, darkAmt), lightAmt));
 				this.drawPixel(x, y);
 			}
 		}
-		
-		this.addBorder();
 	}
 }
