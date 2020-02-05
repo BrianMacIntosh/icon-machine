@@ -161,6 +161,8 @@ window.RandomArt =
 	{
 		if (this.initialized) return;
 		this.initialized = true;
+		
+		this.randomFloat = this.randomFloatDefault;
 
 		this.canvas = document.getElementById("generator");
 		this.context = this.canvas.getContext('2d');
@@ -172,6 +174,9 @@ window.RandomArt =
 		this.dimensionSelect = document.getElementById("dimension");
 		this.tileDimensionSelect = document.getElementById("tileDimension");
 		this.iconClassSelect = document.getElementById("iconClass");
+		this.seedInput = document.getElementById("seed");
+		
+		this.randomizeSeed();
 
 		// set default class from URL
 		var params = {};
@@ -204,6 +209,76 @@ window.RandomArt =
 		this.contextTranslation.x += x;
 		this.contextTranslation.y += y;
 	},
+	
+	// Resets the RNG using the specified seed
+	seedRng: function(seed)
+	{
+		this.seedGenerator = this.xmur3(seed);
+		this.checkpointRng();
+	},
+	
+	// Generates a random seed with the specified random float function
+	createRandomSeed: function(randomFunc)
+	{
+		randomFunc = randomFunc || Math.random;
+		var randomString = "";
+		for (var i = 0; i < 16; i++)
+		{
+			var randomChar = Math.floor(randomFunc()*62);
+			if (randomChar < 10) randomChar = 48+randomChar;
+			else if (randomChar < 36) randomChar = 65-10+randomChar;
+			else randomChar = 97-36+randomChar;
+			randomString += String.fromCharCode(randomChar);
+		}
+		return randomString;
+	},
+	
+	// Generates and sets a random seed with the specified random float function
+	randomizeSeed: function(randomFunc)
+	{
+		var randomString = this.createRandomSeed(randomFunc);
+		this.seedInput.value = randomString;
+		this.seedRng(randomString);
+		this.generateNewImage();
+	},
+	
+	// Creates an RNG "checkpoint" that proofs the results against code changes (somewhat)
+	checkpointRng: function()
+	{
+		if (this.seedGenerator)
+		{
+			this.randomFloat = this.sfc32(this.seedGenerator(), this.seedGenerator(), this.seedGenerator(), this.seedGenerator());
+		}
+	},
+	
+	// Hash function for seeding the RNG
+	xmur3: function(str)
+	{
+		for(var i = 0, h = 1779033703 ^ str.length; i < str.length; i++)
+			h = Math.imul(h ^ str.charCodeAt(i), 3432918353),
+			h = h << 13 | h >>> 19;
+		return function() {
+			h = Math.imul(h ^ h >>> 16, 2246822507);
+			h = Math.imul(h ^ h >>> 13, 3266489909);
+			return (h ^= h >>> 16) >>> 0;
+		}
+	},
+	
+	 // RNG
+	sfc32: function(a, b, c, d)
+	{
+		return function() {
+		  a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0; 
+		  var t = (a + b) | 0;
+		  a = b ^ b >>> 9;
+		  b = c + (c << 3) | 0;
+		  c = (c << 21 | c >>> 11);
+		  d = d + 1 | 0;
+		  t = t + d | 0;
+		  c = c + t | 0;
+		  return (t >>> 0) / 4294967296;
+		}
+	},
 
 	/**
 	 * Returns a random integer in the range [min, max)
@@ -232,17 +307,22 @@ window.RandomArt =
 	/**
 	 * Returns a random float between 0 and 1.
 	 */
-	randomFloat: function()
+	randomFloatDefault: function()
 	{
 		return Math.random();
 	},
+	
+	/**
+	 * Returns a random float between 0 and 1. Overwritten by seeding.
+	 */
+	randomFloat: undefined,
 
 	/**
 	 * Returns a random float between 0 and 1, weighted to the extremes.
 	 */
 	randomFloatExtreme: function()
 	{
-		var rand = Math.random()*2 - 1;
+		var rand = this.randomFloat()*2 - 1;
 		return rand * rand;
 	},
 
@@ -251,7 +331,7 @@ window.RandomArt =
 	 */
 	randomFloatLow: function()
 	{
-		var v = Math.random();
+		var v = this.randomFloat();
 		return v * v;
 	},
 	
@@ -399,6 +479,12 @@ window.RandomArt =
 		this.initialize();
 		this.setIconClass(this.iconClassSelect.options[this.iconClassSelect.selectedIndex].value);
 	},
+	
+	notifySeedChanged: function()
+	{
+		this.initialize();
+		this.generateNewImage();
+	},
 
 	setDisplayScale: function(scale)
 	{
@@ -499,20 +585,36 @@ window.RandomArt =
 	generateNewImage: function()
 	{
 		this.initialize();
-
+		
+		var seed = this.seedInput.value;
+		
+		// meta-rng
+		var metaSeedGenerator = this.xmur3(seed);
+		var metaRandom = this.sfc32(metaSeedGenerator(), metaSeedGenerator(), metaSeedGenerator(), metaSeedGenerator());
+		
 		for (var x = 0; x < this.tileDimension; x++)
 		{
 			for (var y = 0; y < this.tileDimension; y++)
 			{
+				var drawClass = this.iconClass;
+				if (drawClass == "any")
+				{
+					var randomIndex = Math.floor(this.allClasses.length * metaRandom());
+					drawClass = this.allClasses[randomIndex];
+				}
+				
+				this.seedRng(seed);
+				
 				this.translateContext(x * this.dimension, y * this.dimension);
-				switch (this.iconClass == "any"
-					? this.allClasses[this.randomRange(0, this.allClasses.length)]
-					: this.iconClass)
+				switch (drawClass)
 				{
 					case "potions": this.drawRandomPotion(); break;
 					case "blades": this.drawRandomBlade(); break;
 				}
 				this.translateContext(-x * this.dimension, -y * this.dimension);
+				
+				// next seed
+				seed = this.createRandomSeed(metaRandom);
 			}
 		}
 	},
@@ -520,6 +622,7 @@ window.RandomArt =
 	drawRandomPotion: function()
 	{
 		this.initialize();
+		this.checkpointRng();
 
 		var width = this.dimension;
 		var height = this.dimension;
@@ -568,7 +671,7 @@ window.RandomArt =
 			velocity += acceleration;
 			contour[b] = Math.max(neckWidth/2, Math.min(width/2-2, contour[b-1]+d));
 
-			if (b % contourInterval == 0 && Math.random()<=0.5)
+			if (b % contourInterval == 0 && this.randomFloat()<=0.5)
 			{
 				//velocity = direction*this.randomRange(0,11)/2;
 				acceleration = direction*this.randomRange(0,5)/2;
@@ -610,7 +713,7 @@ window.RandomArt =
 				var left = centerXL - contourWidth/2;
 				for (var x = 1; x < contourWidth; x++)
 				{
-					var n = x/(contourWidth-1)-(0.5+Math.random()*0.1);
+					var n = x/(contourWidth-1)-(0.5+this.randomFloat()*0.1);
 					this.context.fillStyle = this.colorStr(
 						this.colorLerp(
 							this.colorLerp(fluidColor, fluidColor2, vn),
@@ -719,10 +822,10 @@ window.RandomArt =
 	
 	drawRandomBlade: function()
 	{
-		//TODO: seeding
 		//TODO: make sure everything is dimensionally scaled
 		
 		this.initialize();
+		this.checkpointRng();
 
 		var bounds = new this.Bounds(0, 0, this.dimension, this.dimension);
 		var bounds1 = new this.Bounds(1, 1, bounds.w - 2, bounds.h - 2);
@@ -784,6 +887,8 @@ window.RandomArt =
 	//TODO: return more info
 	drawBladeHelper: function(params)
 	{
+		this.checkpointRng();
+		
 		var bounds = new this.Bounds(0, 0, this.dimension, this.dimension);
 		var bounds1 = new this.Bounds(1, 1, bounds.w - 2, bounds.h - 2);
 		var dscale = bounds.h / 32;
@@ -970,6 +1075,8 @@ window.RandomArt =
 	// - colorDark: The dark color of the crossguard
 	drawCrossguardHelper: function(params)
 	{
+		this.checkpointRng();
+		
 		var bounds = new this.Bounds(0, 0, this.dimension, this.dimension);
 		var dscale = bounds.h / 32;
 		
@@ -1097,6 +1204,8 @@ window.RandomArt =
 	//TODO: expose more parameters
 	drawGripHelper: function(params)
 	{
+		this.checkpointRng();
+		
 		var bounds = new this.Bounds(0, 0, this.dimension, this.dimension);
 		var dscale = bounds.h / 32;
 		
@@ -1156,6 +1265,8 @@ window.RandomArt =
 	//TODO: expose more parameters
 	drawRoundOrnamentHelper: function(params)
 	{
+		this.checkpointRng();
+		
 		var pommelColorLight = params.colorLight
 			|| this.hsvToRgb({ h: this.randomRange(0, 360), s: this.randomFloatLow()*0.5, v: this.randomRangeFloat(0.7, 1) });
 		var pommelColorDark = params.colorDark
