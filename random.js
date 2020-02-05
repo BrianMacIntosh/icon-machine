@@ -252,6 +252,7 @@ window.RandomArt =
 	},
 	
 	// Hash function for seeding the RNG
+	// https://stackoverflow.com/a/47593316
 	xmur3: function(str)
 	{
 		for(var i = 0, h = 1779033703 ^ str.length; i < str.length; i++)
@@ -264,7 +265,8 @@ window.RandomArt =
 		}
 	},
 	
-	 // RNG
+	// RNG
+	/// https://stackoverflow.com/a/47593316
 	sfc32: function(a, b, c, d)
 	{
 		return function() {
