@@ -66,7 +66,7 @@ margin: 0 10%;
 #generatorCanvas
 {
 display: block;
-margin: 20px;
+margin: 20px 0 8px 0;
 }
 #generatorCanvas canvas
 {
@@ -78,7 +78,24 @@ image-rendering: -o-crisp-edges;
 image-rendering: pixelated;
 transform: scale(2);
 }
-#generatorButton
+#paramsTable
+{
+margin:0 auto;
+}
+.paramLabel
+{
+text-align:right;
+}
+.paramValue
+{
+text-align:left;
+}
+.generatorSeed
+{
+margin-top:25px;
+margin-bottom:5px;
+}
+#generatorParams
 {
 display: block;
 margin: 20px;
@@ -119,24 +136,27 @@ ga('send', 'pageview');
 </select>
 </div>
 <div id="generatorCanvas"><canvas id="generator" width="32" height="32"></canvas></div>
-<div id="generatorButton">
-	<label for="dimension">Size:</label> <select id="dimension" onchange="RandomArt.notifySizeChanged()">
-		<option value="16">16</option>
-		<option value="32" selected>32</option>
-		<!--option value="64">64</option-->
-	</select> px<br/>
-	<label for="tileDimension">Qty:</label> <select id="tileDimension" onchange="RandomArt.notifyTileDimensionChanged()">
+<div id="restoreConfigPreZoomButton"><a href="javascript:RandomArt.restoreConfigPreZoom()" title="Go Back"><img id="revertButton" src="ico_expand.png" alt="Revert"/></a></div>
+<div id="generatorParams">
+	<table id="paramsTable">
+	<tr><td class="paramLabel"><label for="dimension">Size:</label></td><td class="paramValue"><select id="dimension" onchange="RandomArt.notifySizeChanged()">
+		<option value="16">16 px</option>
+		<option value="32" selected>32 px</option>
+		<!--option value="64">64 px</option-->
+	</select></td></tr>
+	<tr><td class="paramLabel"><label for="tileDimension">Qty:</label></td><td class="paramValue"><select id="tileDimension" onchange="RandomArt.notifyTileDimensionChanged()">
 		<option value="1" selected>1</option>
 		<option value="2">2x2</option>
 		<option value="4">4x4</option>
 		<option value="8">8x8</option>
-	</select><br/>
-	<label for="iconClass">Mode:</label> <select id="iconClass" onchange="RandomArt.notifyIconClassChanged()">
+	</select></td></tr>
+	<tr><td class="paramLabel"><label for="iconClass">Mode:</label></td><td class="paramValue"><select id="iconClass" onchange="RandomArt.notifyIconClassChanged()">
 		<option value="potions" selected>Potions</option>
 		<option value="blades">Blades</option>
 		<!--option value="any">Any</option-->
-	</select><br/>
-	<label for="seed">Seed:</label> <input id="seed" type="text" oninput="RandomArt.notifySeedChanged()" onchange="RandomArt.notifySeedChanged()"/><br/>
+	</select></td></tr>
+	</table>
+	<div class="generatorSeed"><label for="seed">Seed:</label> <input id="seed" type="text" oninput="RandomArt.notifySeedChanged()" onchange="RandomArt.notifySeedChanged()"/></div>
 	<button onclick="RandomArt.randomizeSeed(); return false;">Randomize</input>
 </div>
 <div id="text">

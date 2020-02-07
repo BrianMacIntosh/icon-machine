@@ -26,6 +26,9 @@ window.RandomArt =
 	iconClass: "potions",
 
 	allClasses: [ "potions", "blades" ],
+	
+	// Stores the state of the parameters from before the last zoom-in
+	configPreZoom: null,
 
 	Bounds: class
 	{
@@ -165,11 +168,13 @@ window.RandomArt =
 		this.randomFloat = this.randomFloatDefault;
 
 		this.canvas = document.getElementById("generator");
+		this.canvas.addEventListener("click", function(e){RandomArt.handleCanvasClick(e);});
 		this.context = this.canvas.getContext('2d');
 		this.contextTranslation = new this.Vector(0, 0);
 
 		this.canvasParent = document.getElementById("generatorCanvas");
-
+		
+		this.restoreConfigPreZoomButton = document.getElementById("restoreConfigPreZoomButton");
 		this.displayScaleSelect = document.getElementById("displayScale");
 		this.dimensionSelect = document.getElementById("dimension");
 		this.tileDimensionSelect = document.getElementById("tileDimension");
@@ -201,6 +206,7 @@ window.RandomArt =
 		}
 
 		this.updateDisplayScale();
+		this.clearConfigPreZoom();
 	},
 
 	translateContext: function(x, y)
@@ -457,34 +463,99 @@ window.RandomArt =
 		else
 			return "rgb(" + Math.floor(color.r) + "," + Math.floor(color.g) + "," + Math.floor(color.b) + ")";
 	},
+	
+	handleCanvasClick: function(e)
+	{
+		if (this.tileDimension > 1)
+		{
+			this.configPreZoom = {
+				seed: this.seedInput.value,
+				tileDimension: this.tileDimensionSelect.value
+			};
+			this.restoreConfigPreZoomButton.style.visibility = "visible";
+			var rect = this.canvas.getBoundingClientRect();
+			var localX = (e.clientX - rect.left) / this.displayScale;
+			var localY = (e.clientY - rect.top) / this.displayScale;
+			var tileX = Math.floor(localX / this.dimension);
+			var tileY = Math.floor(localY / this.dimension);
+			this.tileDimensionSelect.value = "1";
+			this.seedInput.value = this.tileSeeds[tileX + tileY * this.tileDimension];
+			this.setTileDimension(1);
+		}
+	},
 
 	notifyDisplayScaleChanged: function()
 	{
 		this.initialize();
+		this.clearConfigPreZoom();
 		this.setDisplayScale(parseFloat(this.displayScaleSelect.options[this.displayScaleSelect.selectedIndex].value));
 	},
 
 	notifySizeChanged: function()
 	{
 		this.initialize();
+		this.clearConfigPreZoom();
 		this.setDimension(parseInt(this.dimensionSelect.options[this.dimensionSelect.selectedIndex].value));
 	},
 
 	notifyTileDimensionChanged: function()
 	{
 		this.initialize();
+		this.clearConfigPreZoom();
 		this.setTileDimension(parseInt(this.tileDimensionSelect.options[this.tileDimensionSelect.selectedIndex].value));
 	},
 
 	notifyIconClassChanged: function()
 	{
 		this.initialize();
+		this.clearConfigPreZoom();
 		this.setIconClass(this.iconClassSelect.options[this.iconClassSelect.selectedIndex].value);
 	},
 	
 	notifySeedChanged: function()
 	{
 		this.initialize();
+		this.clearConfigPreZoom();
+		this.generateNewImage();
+	},
+	
+	restoreConfigPreZoom: function()
+	{
+		if (this.configPreZoom)
+		{
+			this.restoreConfig(this.configPreZoom);
+			this.clearConfigPreZoom();
+		}
+	},
+	
+	clearConfigPreZoom: function()
+	{
+		this.configPreZoom = null;
+		this.restoreConfigPreZoomButton.style.visibility = "hidden";
+	},
+	
+	restoreConfig: function(config)
+	{
+		//TODO: minimize rebuild calls
+		if (config.dimension)
+		{
+			this.dimensionSelect.value = config.dimension;
+			this.setDimension(parseInt(config.dimension));
+		}
+		if (config.tileDimension)
+		{
+			this.tileDimensionSelect.value = config.tileDimension;
+			this.setTileDimension(parseInt(config.tileDimension));
+		}
+		if (config.iconClass)
+		{
+			this.iconClassSelect.value = config.iconClass;
+			this.setIconClass(config.iconClass);
+		}
+		if (config.seed)
+		{
+			this.seedInput.value = config.seed;
+		}
 		this.generateNewImage();
 	},
 
@@ -506,6 +577,7 @@ window.RandomArt =
 	{
 		this.initialize();
 		this.tileDimension = tileDimension;
+		this.canvas.style.cursor = this.tileDimension > 1 ? "pointer" : "inherit";
 		this.resizeCanvas();
 	},
 
@@ -594,9 +666,11 @@ window.RandomArt =
 		var metaSeedGenerator = this.xmur3(seed);
 		var metaRandom = this.sfc32(metaSeedGenerator(), metaSeedGenerator(), metaSeedGenerator(), metaSeedGenerator());
 		
-		for (var x = 0; x < this.tileDimension; x++)
+		this.tileSeeds = [];
+		
+		for (var y = 0; y < this.tileDimension; y++)
 		{
-			for (var y = 0; y < this.tileDimension; y++)
+			for (var x = 0; x < this.tileDimension; x++)
 			{
 				var drawClass = this.iconClass;
 				if (drawClass == "any")
@@ -606,6 +680,7 @@ window.RandomArt =
 				}
 				
 				this.seedRng(seed);
+				this.tileSeeds.push(seed);
 				
 				this.translateContext(x * this.dimension, y * this.dimension);
 				switch (drawClass)
@@ -659,6 +734,18 @@ window.RandomArt =
 		var fluidTop = neckTop + this.randomRange(height/8, (bottleBottom-neckTop)*0.6);
 		// min dist between contour changes
 		var contourInterval = Math.round(4 * dscale);
+		
+		var stopperLight = { r:222, g:152, b:100 };
+		var stopperDark = { r:118, g:49, b:0 };
+
+		var innerBorderLight = { r:213, g:226, b:239 };
+		var innerBorderDark = { r:181, g:196, b:197 };
+
+		var glassLight = { r:227, g:244, b:248, a: 165/255 };
+		var glassDark = { r:163, g:187, b:199, a: 165/255 };
+
+		var fluidColor = this.randomColor();
+		var fluidColor2 = this.colorRandomize(fluidColor, 300);
 
 		// generate shape of neck/body
 		var contour = [];
@@ -680,18 +767,6 @@ window.RandomArt =
 				direction = -direction;
 			}
 		}
-
-		var stopperLight = { r:222, g:152, b:100 };
-		var stopperDark = { r:118, g:49, b:0 };
-
-		var innerBorderLight = { r:213, g:226, b:239 };
-		var innerBorderDark = { r:181, g:196, b:197 };
-
-		var glassLight = { r:227, g:244, b:248, a: 165/255 };
-		var glassDark = { r:163, g:187, b:199, a: 165/255 };
-
-		var fluidColor = this.randomColor();
-		var fluidColor2 = this.colorRandomize(fluidColor, 300);
 
 		// draw outer stopper
 		var stopperLeft = centerXL - stopperTopWidth/2 + 1;
