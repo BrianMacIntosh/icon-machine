@@ -20,6 +20,8 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 window.RandomArt =
 {
+	versionNumber: 2,
+	
 	displayScale: 2,
 	dimension: 32,
 	tileDimension: 1,
