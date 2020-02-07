@@ -90,7 +90,7 @@ text-align:right;
 {
 text-align:left;
 }
-.generatorSeed
+#generatorSeed
 {
 margin-top:25px;
 margin-bottom:5px;
@@ -99,6 +99,11 @@ margin-bottom:5px;
 {
 display: block;
 margin: 20px;
+}
+#shareButton
+{
+display:inline;
+vertical-align:middle;
 }
 #ad
 {
@@ -156,7 +161,10 @@ ga('send', 'pageview');
 		<!--option value="any">Any</option-->
 	</select></td></tr>
 	</table>
-	<div class="generatorSeed"><label for="seed">Seed:</label> <input id="seed" type="text" oninput="RandomArt.notifySeedChanged()" onchange="RandomArt.notifySeedChanged()"/></div>
+	<div id="generatorSeed">
+		<label for="seed">Seed:</label> <input id="seed" type="text" oninput="RandomArt.notifySeedChanged()" onchange="RandomArt.notifySeedChanged()"/>
+		<div id="shareButton"><a id="shareLink" title="Shareable link to this image"><img src="ico_link.png" alt="Share"/></a></div>
+	</div>
 	<button onclick="RandomArt.randomizeSeed(); return false;">Randomize</input>
 </div>
 <div id="text">

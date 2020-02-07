@@ -175,15 +175,14 @@ window.RandomArt =
 		this.canvasParent = document.getElementById("generatorCanvas");
 		
 		this.restoreConfigPreZoomButton = document.getElementById("restoreConfigPreZoomButton");
+		this.shareLinkAnchor = document.getElementById("shareLink");
 		this.displayScaleSelect = document.getElementById("displayScale");
 		this.dimensionSelect = document.getElementById("dimension");
 		this.tileDimensionSelect = document.getElementById("tileDimension");
 		this.iconClassSelect = document.getElementById("iconClass");
 		this.seedInput = document.getElementById("seed");
-		
-		this.randomizeSeed();
 
-		// set default class from URL
+		// set default config from URL
 		var params = {};
 		var stringParams = location.search.substring(1).split('&');
 		for (var i = 0; i < stringParams.length; i++)
@@ -191,6 +190,16 @@ window.RandomArt =
 			var nv = stringParams[i].split('=');
 			if (!nv[0]) continue;
 			params[nv[0]] = nv[1] || true;
+		}
+		if (params.dim)
+		{
+			this.dimension = parseInt(params.dim);
+			this.dimensionSelect.value = this.dimension;
+		}
+		if (params.tiledim)
+		{
+			this.tileDimension = parseInt(params.tiledim);
+			this.tileDimensionSelect.value = this.tileDimension;
 		}
 		if (params.class)
 		{
@@ -204,9 +213,19 @@ window.RandomArt =
 				}
 			}
 		}
+		if (params.seed)
+		{
+			this.seedInput.value = params.seed;
+			this.resizeCanvas(); // accounts for dimensions changed by parameters
+		}
+		else
+		{
+			this.randomizeSeed();
+		}
 
 		this.updateDisplayScale();
 		this.clearConfigPreZoom();
+		this.updateShareLink();
 	},
 
 	translateContext: function(x, y)
@@ -245,6 +264,8 @@ window.RandomArt =
 		var randomString = this.createRandomSeed(randomFunc);
 		this.seedInput.value = randomString;
 		this.seedRng(randomString);
+		this.updateShareLink();
+		this.clearConfigPreZoom();
 		this.generateNewImage();
 	},
 	
@@ -472,7 +493,7 @@ window.RandomArt =
 				seed: this.seedInput.value,
 				tileDimension: this.tileDimensionSelect.value
 			};
-			this.restoreConfigPreZoomButton.style.visibility = "visible";
+			this.restoreConfigPreZoomButton.style.display = "initial";
 			var rect = this.canvas.getBoundingClientRect();
 			var localX = (e.clientX - rect.left) / this.displayScale;
 			var localY = (e.clientY - rect.top) / this.displayScale;
@@ -517,6 +538,7 @@ window.RandomArt =
 		this.initialize();
 		this.clearConfigPreZoom();
 		this.generateNewImage();
+		this.updateShareLink();
 	},
 	
 	restoreConfigPreZoom: function()
@@ -531,7 +553,7 @@ window.RandomArt =
 	clearConfigPreZoom: function()
 	{
 		this.configPreZoom = null;
-		this.restoreConfigPreZoomButton.style.visibility = "hidden";
+		this.restoreConfigPreZoomButton.style.display = "none";
 	},
 	
 	restoreConfig: function(config)
@@ -558,6 +580,15 @@ window.RandomArt =
 		}
 		this.generateNewImage();
 	},
+	
+	updateShareLink: function()
+	{
+		this.shareLinkAnchor.href = "index.html?"
+			+ "dim=" + this.dimension
+			+ "&tiledim=" + this.tileDimension
+			+ "&class=" + this.iconClass
+			+ "&seed=" + this.seedInput.value;
+	},
 
 	setDisplayScale: function(scale)
 	{
@@ -571,6 +602,7 @@ window.RandomArt =
 		this.initialize();
 		this.dimension = dimension;
 		this.resizeCanvas();
+		this.updateShareLink();
 	},
 
 	setTileDimension: function(tileDimension)
@@ -579,6 +611,7 @@ window.RandomArt =
 		this.tileDimension = tileDimension;
 		this.canvas.style.cursor = this.tileDimension > 1 ? "pointer" : "inherit";
 		this.resizeCanvas();
+		this.updateShareLink();
 	},
 
 	setIconClass: function(iconClass)
@@ -586,6 +619,7 @@ window.RandomArt =
 		this.initialize();
 		this.iconClass = iconClass;
 		this.generateNewImage();
+		this.updateShareLink();
 		if (window.history) window.history.replaceState({}, "Icon Machine | " + this.iconClass, '/iconmachine?class=' + this.iconClass);
 	},
 
