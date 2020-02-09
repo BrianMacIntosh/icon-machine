@@ -585,7 +585,7 @@ window.RandomArt =
 	
 	updateShareLink: function()
 	{
-		this.shareLinkAnchor.href = "index.html?"
+		this.shareLinkAnchor.href = "/iconmachine?"
 			+ "dim=" + this.dimension
 			+ "&tiledim=" + this.tileDimension
 			+ "&class=" + this.iconClass
