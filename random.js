@@ -1015,7 +1015,6 @@ window.RandomArt =
 	{
 		//TODO:
 		//- ribbons
-		//- more grip position variance
 		//- better taper on points
 		//- fix discontiguous crossguards
 		
