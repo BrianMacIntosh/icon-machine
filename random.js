@@ -1031,16 +1031,15 @@ window.RandomArt =
 
 		this.clearCanvas();
 		
+		var gripLengthMin = 8;
 		// length of the tip
 		var tipLength = Math.ceil(this.randomRange(13, 17) * dscale);
-		// diagonal start of the grip
-		var gripStartDiag = 0;
-		// length of the grip
-		var gripLength = Math.ceil(this.randomRange(8, 13) * dscale);
-		// diagonal end of the grip
-		var gripEndDiag = gripStartDiag + gripLength;
 		// diagonal start of the tip
 		var tipStartDiag = canvasDiag - tipLength;
+		// diagonal start of the grip
+		var gripStartDiag = Math.ceil(this.randomRange(0, tipStartDiag - gripLengthMin));
+		// length of the grip
+		var gripLength = Math.ceil(this.randomRange(gripLengthMin, tipStartDiag - gripStartDiag) * dscale);
 		
 		// draw the tip
 		var tipParams = {
@@ -1052,8 +1051,8 @@ window.RandomArt =
 		
 		// draw the haft
 		var haftParams = {
-			startDiag: gripStartDiag,
-			lengthDiag: tipStartDiag - gripStartDiag,
+			startDiag: 0,
+			lengthDiag: tipStartDiag,
 			maxRadius: tipResults.startRadius * 2,
 			fractionalRadiusAllowed: true
 		};
@@ -1064,12 +1063,11 @@ window.RandomArt =
 		var haftResults = this.drawHaftHelper(haftParams);
 		
 		// draw the grip
-		//TODO: position it up the haft
 		if (this.randomFloat() > 0.65)
 		{
 			var gripParams = {
 				startDiag: gripStartDiag,
-				lengthDiag: gripLength,
+				lengthDiag: gripLength / Math.sqrt(2), //HACK:
 				minRadius: haftResults.radius,
 				maxRadius: haftResults.radius,
 				fractionalRadiusAllowed: true
@@ -1526,10 +1524,11 @@ window.RandomArt =
 		var radSteps = params.radius / 0.5;
 		
 		var fractionalRadius = (params.radius % 1) != 0;
+		var startAxis = Math.ceil(params.startDiag / Math.sqrt(2));
 		var lengthAxis = params.lengthDiag / Math.sqrt(2);
 		for (var l = 0; l < lengthAxis; l += 0.5)
 		{
-			var al = params.startDiag + l;
+			var al = startAxis + l;
 
 			// determine draw parameters
 			var core = new this.Vector(al, bounds.h - 1 - al);
@@ -1566,7 +1565,6 @@ window.RandomArt =
 				}
 				darkenAmt *= 0.3;
 				
-				console.log(darkenAmt);
 				this.context.fillStyle = this.colorStr(this.colorDarken(sliceColor, darkenAmt));
 				this.drawPixel(core.x + h, core.y + h);
 			}
