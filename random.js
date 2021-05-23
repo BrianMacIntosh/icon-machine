@@ -952,6 +952,9 @@ window.RandomArt =
 	
 	drawRandomBlade: function()
 	{
+		//TODO:
+		//- serration
+		
 		//TODO: make sure everything is dimensionally scaled
 		
 		this.initialize();
@@ -1010,6 +1013,12 @@ window.RandomArt =
 	
 	drawRandomSpear: function()
 	{
+		//TODO:
+		//- ribbons
+		//- more grip position variance
+		//- better taper on points
+		//- fix discontiguous crossguards
+		
 		//TODO: make sure everything is dimensionally scaled
 		
 		this.initialize();
@@ -1490,7 +1499,7 @@ window.RandomArt =
 		// the color of the haft
 		var haftColor = params.color
 			? params.color
-			: this.hsvToRgb({ h: this.randomRange(35, 45), s: this.randomFloat(), v: this.randomRangeFloat(0.3, 0.8) });
+			: this.hsvToRgb({ h: this.randomRange(35, 45), s: this.randomFloat(), v: this.randomRangeFloat(0.5, 0.95) });
 
 		var rodParams = {
 			radius: haftRadius,
@@ -1547,7 +1556,17 @@ window.RandomArt =
 			this.context.fillStyle = this.colorStr(sliceColor);
 			for (var h = left; h <= right; h++)
 			{
-				var darkenAmt = Math.max(0, h + params.radius) / (params.radius * 4);
+				if (left == right)
+				{
+					var darkenAmt = fractionalStep ? 0 : 1;
+				}
+				else
+				{
+					var darkenAmt = (h - left) / (right - left);
+				}
+				darkenAmt *= 0.3;
+				
+				console.log(darkenAmt);
 				this.context.fillStyle = this.colorStr(this.colorDarken(sliceColor, darkenAmt));
 				this.drawPixel(core.x + h, core.y + h);
 			}
