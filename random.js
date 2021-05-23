@@ -2,7 +2,7 @@
 /*
 Icon Machine - Random Potion Icon Generator
 
-Copyright 2018 Brian MacIntosh <brian@brianmacintosh.com>
+Copyright 2018-2021 Brian MacIntosh <brian@brianmacintosh.com>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -983,7 +983,8 @@ window.RandomArt =
 		var hiltParams = {
 			startDiag: hiltStartDiag,
 			lengthDiag: Math.floor(bladeResults.startOrtho - hiltStartDiag),
-			maxRadius: bladeResults.startRadius
+			maxRadius: bladeResults.startRadius,
+			fractionalRadiusAllowed: false
 		};
 		this.drawGripHelper(hiltParams);
 
@@ -1044,7 +1045,8 @@ window.RandomArt =
 		var haftParams = {
 			startDiag: gripStartDiag,
 			lengthDiag: tipStartDiag - gripStartDiag,
-			maxRadius: tipResults.startRadius
+			maxRadius: tipResults.startRadius * 2,
+			fractionalRadiusAllowed: true
 		};
 		if (this.randomFloat() > 0.95)
 		{
@@ -1054,13 +1056,14 @@ window.RandomArt =
 		
 		// draw the grip
 		//TODO: position it up the haft
-		if (this.randomFloat() > 0.9)
+		if (this.randomFloat() > 0.65)
 		{
 			var gripParams = {
 				startDiag: gripStartDiag,
 				lengthDiag: gripLength,
 				minRadius: haftResults.radius,
-				maxRadius: haftResults.radius
+				maxRadius: haftResults.radius,
+				fractionalRadiusAllowed: true
 			};
 			this.drawGripHelper(gripParams);
 		}
@@ -1232,7 +1235,7 @@ window.RandomArt =
 			}
 			if (bestPoint == null) continue;
 			
-			var dotProduct = bestPoint.normal.dotProduct(x - bestPoint.x, y - bestPoint.y);
+			var dotProduct = bestPoint.normal.dotProduct(x - bestPoint.x + 0.5, y - bestPoint.y + 0.5);
 			var useWidth = dotProduct < 0 ? bestPoint.widthL : bestPoint.widthR;
 			var coreDistance = bestPoint.distanceTo(x, y);
 			if (coreDistance <= useWidth
@@ -1241,9 +1244,9 @@ window.RandomArt =
 				var color = this.colorLerp(colorBladeLinearHilt, colorBladeLinearTip, bestPoint.normalizedDist);
 
 				// do not change core
-				if (bestPoint.x == x && bestPoint.y == y)
-				{ }
-				else
+				//if (bestPoint.x == x && bestPoint.y == y)
+				//{ }
+				//else
 				{
 					var edgeColor = this.colorLighten(color, bladeEdgeLighten);
 					var darkColor = this.colorDarken(color, bladeRightDarken);
@@ -1418,7 +1421,8 @@ window.RandomArt =
 	// - startDiag (required): The distance from the bottom-left corner to the start of the grip
 	// - lengthDiag (required): The length of the grip
 	// - minRadius (optional): The minimum radius of the grip
-	// - maxRadius (optional): The maximum radius of the grip
+	// - maxRadius (required): The maximum radius of the grip
+	// - fractionalRadiusAllowed (optional): Allow fractional radius? (won't be centered)
 	//TODO: expose more parameters
 	drawGripHelper: function(params)
 	{
@@ -1428,9 +1432,13 @@ window.RandomArt =
 		var dscale = bounds.h / 32;
 		
 		// the radius of the grip in pixel diagonals
-		var hiltRadius = 0.5 * Math.ceil(this.randomRange(0, 2) * dscale);
-		if (params.maxRadius !== undefined) hiltRadius = Math.min(params.maxRadius, hiltRadius);
-		if (params.minRadius !== undefined) hiltRadius = Math.max(params.minRadius, hiltRadius);
+		var minRadius = params.minRadius ? params.minRadius : 1;
+		var maxRadius = params.maxRadius;
+		if (params.fractionalRadiusAllowed)
+			var hiltRadius = 0.5 * Math.ceil(this.randomRange(minRadius * 2, maxRadius * 2) * dscale);
+		else
+			var hiltRadius = Math.ceil(this.randomRange(minRadius, maxRadius) * dscale);
+		
 		// wavelength of the grip texture (in diagonal pixels)
 		var hiltWavelength = Math.max(2, Math.ceil(this.randomRange(3,6) * dscale));
 		// amplitude of the grip wave
@@ -1462,6 +1470,7 @@ window.RandomArt =
 	// - lengthDiag (required): The length of the haft
 	// - minRadius (optional): The minimum radius of the haft
 	// - maxRadius (optional): The maximum radius of the haft
+	// - fractionalRadiusAllowed (optional): Allow fractional radius? (won't be centered)
 	// - color (optional): The color of the haft
 	drawHaftHelper: function(params)
 	{
@@ -1471,9 +1480,13 @@ window.RandomArt =
 		var dscale = bounds.h / 32;
 		
 		// the radius of the haft in pixel diagonals
-		var haftRadius = 0.5 * Math.ceil(this.randomRange(0, 2) * dscale);
-		if (params.maxRadius !== undefined) haftRadius = Math.min(params.maxRadius, haftRadius);
-		if (params.minRadius !== undefined) haftRadius = Math.max(params.minRadius, haftRadius);
+		var minRadius = params.minRadius ? params.minRadius : 1;
+		var maxRadius = params.maxRadius;
+		if (params.fractionalRadiusAllowed)
+			var haftRadius = 0.5 * Math.ceil(this.randomRange(minRadius * 2, maxRadius * 2) * dscale);
+		else
+			var haftRadius = Math.ceil(this.randomRange(minRadius, maxRadius) * dscale);
+		
 		// the color of the haft
 		var haftColor = params.color
 			? params.color
@@ -1501,8 +1514,9 @@ window.RandomArt =
 	drawRodHelper: function(params)
 	{
 		var bounds = new this.Bounds(0, 0, this.dimension, this.dimension);
+		var radSteps = params.radius / 0.5;
 		
-		var radiusOdd = (params.radius % 2) != 0;
+		var fractionalRadius = (params.radius % 1) != 0;
 		var lengthAxis = params.lengthDiag / Math.sqrt(2);
 		for (var l = 0; l < lengthAxis; l += 0.5)
 		{
@@ -1510,19 +1524,22 @@ window.RandomArt =
 
 			// determine draw parameters
 			var core = new this.Vector(al, bounds.h - 1 - al);
-			var isOdd = (al % 1) != 0;
-			core.x = Math.ceil(core.x);
-			core.y = Math.ceil(core.y);
-			if (isOdd)
+			var fractionalStep = (al % 1) != 0;
+			if (!fractionalStep)
 			{
-				var left = -Math.ceil(params.radius);
-				var right = Math.floor(params.radius);
-				if (!radiusOdd) right--;
+				core.x = core.x;
+				core.y = core.y;
+				
+				var left = -Math.floor((radSteps - 2) / 4);
+				var right = Math.floor((radSteps - 1) / 4);
 			}
 			else
 			{
-				var left = -Math.floor(params.radius);
-				var right = Math.floor(params.radius);
+				core.x = Math.floor(core.x);
+				core.y = Math.floor(core.y);
+			
+				var left = -Math.floor((radSteps - 3) / 4);
+				var right = Math.floor((radSteps - 0) / 4);
 			}
 
 			// draw grip line
