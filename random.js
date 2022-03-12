@@ -1622,10 +1622,11 @@ window.RandomArt =
 	// - colorFunc (required): Function that gets the color of the rod by the pixel index along it
 	drawRodHelper: function(params)
 	{
+		var radius = Math.max(1, params.radius);
 		var bounds = new this.Bounds(0, 0, this.dimension, this.dimension);
-		var radSteps = params.radius / 0.5;
+		var radSteps = radius / 0.5;
 		
-		var fractionalRadius = (params.radius % 1) != 0;
+		var fractionalRadius = (radius % 1) != 0;
 		var startAxis = Math.ceil(params.startDiag / Math.sqrt(2));
 		var lengthAxis = params.lengthDiag / Math.sqrt(2);
 		for (var l = 0; l < lengthAxis; l += 0.5)
@@ -1651,7 +1652,7 @@ window.RandomArt =
 				var left = -Math.floor((radSteps - 3) / 4);
 				var right = Math.floor((radSteps - 0) / 4);
 			}
-
+			
 			// draw grip line
 			var sliceColor = params.colorFunc(l);
 			this.context.fillStyle = this.colorStr(sliceColor);
