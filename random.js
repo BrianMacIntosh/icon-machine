@@ -585,11 +585,14 @@ window.RandomArt =
 	
 	updateShareLink: function()
 	{
-		this.shareLinkAnchor.href = "/iconmachine?"
-			+ "dim=" + this.dimension
-			+ "&tiledim=" + this.tileDimension
-			+ "&class=" + this.iconClass
-			+ "&seed=" + this.seedInput.value;
+		if (this.shareLinkAnchor)
+		{
+			this.shareLinkAnchor.href = "/iconmachine?"
+				+ "dim=" + this.dimension
+				+ "&tiledim=" + this.tileDimension
+				+ "&class=" + this.iconClass
+				+ "&seed=" + this.seedInput.value;
+		}
 	},
 
 	setDisplayScale: function(scale)
