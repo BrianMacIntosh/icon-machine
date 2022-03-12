@@ -25,9 +25,9 @@ window.RandomArt =
 	displayScale: 2,
 	dimension: 32,
 	tileDimension: 1,
-	iconClass: "potions",
+	iconClass: "anyweapon",
 
-	allClasses: [ "potions", "blades" ],
+	allClasses: [ "potions", "blades", "spears" ],
 	
 	// Stores the state of the parameters from before the last zoom-in
 	configPreZoom: null,
@@ -761,6 +761,12 @@ window.RandomArt =
 				if (drawClass == "any")
 				{
 					var randomIndex = Math.floor(this.allClasses.length * metaRandom());
+					drawClass = this.allClasses[randomIndex];
+				}
+				else if (drawClass == "anyweapon")
+				{
+					//HACK: magic numbers, hardcoded indices
+					var randomIndex = 1 + Math.floor((this.allClasses.length - 1) * metaRandom());
 					drawClass = this.allClasses[randomIndex];
 				}
 				
