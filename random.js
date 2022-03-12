@@ -320,6 +320,22 @@ window.RandomArt =
 	},
 	
 	/**
+	 * Returns a random integer in the range [min, max), skewed low
+	 */
+	randomRangeLow: function(min, max)
+	{
+		return Math.floor(this.randomRangeFloatLow(min, max));
+	},
+	
+	/**
+	 * Returns a random integer in the range [min, max), skewed high
+	 */
+	randomRangeHigh: function(min, max)
+	{
+		return Math.floor(this.randomRangeFloatHigh(min, max));
+	},
+	
+	/**
 	 * Returns 1 or -1.
 	 */
 	randomSign: function()
@@ -341,6 +357,14 @@ window.RandomArt =
 	randomRangeFloatExtreme: function(min, max)
 	{
 		return this.randomSign() * this.randomFloatHigh((max - min) / 2) + (max + min) / 2;
+	},
+	
+	/**
+	 * Returns a random float in the range [min, max), skewed low.
+	 */
+	randomRangeFloatLow: function(min, max)
+	{
+		return this.randomFloatLow() * (max - min) + min;
 	},
 	
 	/**
@@ -405,6 +429,12 @@ window.RandomArt =
 	floatLerp: function(a, b, t)
 	{
 		return (b - a) * t + a;
+	},
+	
+	diagToPosition: function(diag, bounds)
+	{
+		var ortho = Math.floor(diag / Math.sqrt(2));
+		return new this.Vector(ortho, bounds.h - 1 - ortho);
 	},
 
 	clamp: function(val, min, max)
@@ -1017,6 +1047,8 @@ window.RandomArt =
 		//- ribbons
 		//- better taper on points
 		//- fix discontiguous crossguards
+		//- possible center element in large pommel
+		//- more, wilder crossguards
 		
 		//TODO: make sure everything is dimensionally scaled
 		
@@ -1032,7 +1064,7 @@ window.RandomArt =
 		
 		var gripLengthMin = 8;
 		// length of the tip
-		var tipLength = Math.ceil(this.randomRange(13, 17) * dscale);
+		var tipLength = Math.ceil(this.randomRange(10, 20) * dscale);
 		// diagonal start of the tip
 		var tipStartDiag = canvasDiag - tipLength;
 		// diagonal start of the grip
@@ -1085,6 +1117,63 @@ window.RandomArt =
 				thickness: this.randomRangeFloat(1, 2)
 			};
 			var crossguardResults = this.drawCrossguardHelper(crossguardParams);
+		}
+		
+		// draw ribbon(s)
+		var ribbonCount = this.randomRangeLow(0, 4);
+		for (var ribbonIndex = 0; ribbonIndex < ribbonCount; ++ribbonIndex)
+		{
+			//TODO:
+		}
+		
+		// draw pommel
+		if (this.randomFloat() > 0.4)
+		{
+			var pommelLength = Math.ceil(this.randomFloatLow() * 2 * dscale);
+			var pommelRadius = pommelLength * Math.sqrt(2) / 2;
+			var pommelParams = {
+				center: new this.Vector(Math.floor(pommelRadius + 1), Math.ceil(bounds.h - pommelRadius - 2)),
+				radius: pommelRadius
+			};
+			
+			if (crossguardResults && this.randomFloat() > 0.5)
+			{
+				// match crossguard colors
+				pommelParams.colorLight = crossguardResults.colorLight;
+				pommelParams.colorDark = crossguardResults.colorDark;
+			}
+			else
+			{
+				// generate new colors
+				pommelParams.colorLight = this.hsvToRgb({ h: this.randomRange(0, 360), s: this.randomFloat(), v: this.randomRangeFloat(0, 1) });
+			}
+			
+			this.drawRoundOrnamentHelper(pommelParams);
+		}
+		
+		// draw crossguard device
+		if (this.randomFloat() > 0.4)
+		{
+			var deviceLength = Math.ceil(this.randomFloat() * 3 * dscale);
+			var deviceRadius = deviceLength * Math.sqrt(2) / 2;
+			var deviceParams = {
+				center: this.diagToPosition(haftParams.startDiag + haftParams.lengthDiag - Math.floor(deviceLength / 2), bounds),
+				radius: deviceRadius
+			};
+			
+			if (crossguardResults && this.randomFloat() > 0.4)
+			{
+				// match crossguard colors
+				deviceParams.colorLight = crossguardResults.colorLight;
+				deviceParams.colorDark = crossguardResults.colorDark;
+			}
+			else
+			{
+				// generate new colors
+				deviceParams.colorLight = this.hsvToRgb({ h: this.randomRange(0, 360), s: this.randomFloat(), v: this.randomRangeFloat(0, 1) });
+			}
+			
+			this.drawRoundOrnamentHelper(deviceParams);
 		}
 		
 		this.addBorder();
@@ -1478,6 +1567,8 @@ window.RandomArt =
 	// - maxRadius (optional): The maximum radius of the haft
 	// - fractionalRadiusAllowed (optional): Allow fractional radius? (won't be centered)
 	// - color (optional): The color of the haft
+	// Returns an object containing:
+	// - radius: the radius of the haft
 	drawHaftHelper: function(params)
 	{
 		this.checkpointRng();
