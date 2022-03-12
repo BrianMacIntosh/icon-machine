@@ -687,13 +687,13 @@ window.RandomArt =
 	
 	clearCanvas: function()
 	{
-		this.context.fillStyle = "rgba(0,0,0,0)";
+		this.context.fillStyle = "rgba(0,0,0,1)";
 		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 	},
 	
 	drawPixel: function(x, y)
 	{
-		this.context.fillRect(x, y, 1, 1);
+		this.context.fillRect(Math.floor(x), Math.floor(y), 1, 1);
 	},
 	
 	/**
@@ -935,11 +935,12 @@ window.RandomArt =
 				// crunch toward middle
 				var crunch = 1 - 0.3 * contourWidth / width;
 				var reflectOffset = Math.round((2 - contourWidth/2) * crunch);
-
+				
+				this.context.save();
 				this.context.globalCompositeOperation = "soft-light";
 				this.context.fillStyle = "white";
 				this.context.fillRect(centerXL + reflectOffset, y + 2, reflectWidth * crunch, 1);
-				this.context.globalCompositeOperation = "source-over";
+				this.context.restore();
 			}
 
 			previousContour = contourWidth;
@@ -1129,10 +1130,9 @@ window.RandomArt =
 		// draw pommel
 		if (this.randomFloat() > 0.4)
 		{
-			var pommelLength = Math.ceil(this.randomFloatLow() * 2 * dscale);
-			var pommelRadius = pommelLength * Math.sqrt(2) / 2;
+			var pommelRadius = Math.ceil((0.5 + this.randomFloatLow() * 0.5) * dscale);
 			var pommelParams = {
-				center: new this.Vector(Math.floor(pommelRadius + 1), Math.ceil(bounds.h - pommelRadius - 2)),
+				center: new this.Vector(Math.floor(pommelRadius), Math.ceil(bounds.h - pommelRadius - 1)),
 				radius: pommelRadius
 			};
 			
@@ -1148,16 +1148,19 @@ window.RandomArt =
 				pommelParams.colorLight = this.hsvToRgb({ h: this.randomRange(0, 360), s: this.randomFloat(), v: this.randomRangeFloat(0, 1) });
 			}
 			
+			//HACK: erase haft that might go below pommel
+			//HACK: off by one?
+			this.context.clearRect(-1, bounds.h, pommelRadius + 1, -(pommelRadius + 1));
+			
 			this.drawRoundOrnamentHelper(pommelParams);
 		}
 		
 		// draw crossguard device
-		if (this.randomFloat() > 0.4)
+		if (this.randomFloat() > 0.55)
 		{
-			var deviceLength = Math.ceil(this.randomFloat() * 3 * dscale);
-			var deviceRadius = deviceLength * Math.sqrt(2) / 2;
+			var deviceRadius = Math.ceil((0.5 + this.randomFloatLow() * 1.5) * dscale);
 			var deviceParams = {
-				center: this.diagToPosition(haftParams.startDiag + haftParams.lengthDiag - Math.floor(deviceLength / 2), bounds),
+				center: this.diagToPosition(haftParams.startDiag + haftParams.lengthDiag - Math.floor(deviceRadius / 2), bounds),
 				radius: deviceRadius
 			};
 			
@@ -1678,8 +1681,8 @@ window.RandomArt =
 		var pommelRadius = params.radius;
 		var shadowCenter = new this.Vector(0.5, 1).normalize().multiplyScalar(pommelRadius).addVector(params.center);
 		var highlightCenter = new this.Vector(-1, -1).normalize().multiplyScalar(pommelRadius * 0.7).addVector(params.center);
-		for (var x = 0; x <= params.center.x + pommelRadius; x++)
-		for (var y = params.center.y - pommelRadius; y <= params.center.y + pommelRadius; y++)
+		for (var x = Math.floor(params.center.x - pommelRadius); x <= Math.ceil(params.center.x + pommelRadius); x++)
+		for (var y = Math.floor(params.center.y - pommelRadius); y <= Math.ceil(params.center.y + pommelRadius); y++)
 		{
 			var radius = params.center.distanceTo(x, y);
 			if (radius <= pommelRadius)
